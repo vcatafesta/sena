@@ -1,0 +1,319 @@
+#!/usr/bin/env bash
+#  sena - aplicativo para gerar numeros aleatorios da sena
+#
+#  Created: 2022/02/15
+#  Altered: 2022/07/04
+#
+#  Copyright (c) 2022-2022, Benedito Ramos <diramos@uol.com.br>
+#  Copyright (c) 2022-2022, Vilmar Catafesta <vcatafesta@gmail.com>
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+#  sena uses quite a few external programs during its execution. You
+#  need to have at least the following installed for makepkg to function:
+#     awk, bsdtar (libarchive), bzip2, coreutils, fakeroot, file, find (findutils),
+#     gettext, gpg, grep, gzip, sed, tput (ncurses), xz, etc
+#########################################################################
+#global
+cpath=$PWD
+filejogos="$cpath/jogos.txt"
+filejogosformatado="$cpath/jogosformatado.txt"
+fileresult="$cpath/resultadosena.txt"
+SITE='https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/'
+_VERSION='1.13.20220704'
+DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat)
+true=1
+false=0
+
+sh_playsena()
+{
+	if [[ -e $filejogos ]]; then
+		conf "${red}:: ${reset}Já existe um arquivo de jogos, deseja substituir?"
+   	LCONF=$?
+   else
+   	LCONF=1
+   fi
+
+   if (( $LCONF )); then
+		>| $filejogos
+		>| $filejogosformatado
+	fi
+
+	[[ ! -e $fileresult ]] && >| $fileresult
+	declare -i qtdjogos=$1
+   [[ $# -gt 2 ]] && { erro "erro: parâmetros em excesso"; sh_usage; exit 1;}
+   [[ $# -eq 2 ]] && declare -i qtddezenas=$2 || declare -i qtddezenas=6
+ 	[[ qtdjogos   -lt 1  ]] && { erro "erro: mínimo de 1 jogo brother!"; sh_usage; exit 1;}
+ 	[[ qtddezenas -gt 15 ]] && { erro "erro: máximo de dezenas jogadas é: 15"; sh_usage; exit 1;}
+ 	[[ qtddezenas -lt  6 ]] && { erro "erro: mínimo de dezenas jogadas é: 6"; sh_usage; exit 1;}
+ 	[[ qtddezenas -gt 15 ]] && qtddezenas=15
+ 	[[ qtddezenas -lt  6 ]] && qtddezenas=6
+	bytes=$(filesize $fileresult); [[ $bytes -eq 0 ]] && { sh_usage; die "erro: necessário atualizar o BD. Use sena --update";} || sh_resultadosena
+	declare -i resto=$(( qtddezenas % 2 ))
+	declare -i metadeqtddezenas=$(( qtddezenas / 2 ))
+	declare -i outrametade=$metadeqtddezenas
+	declare -i n=0
+
+ 	if [[ resto -gt 0 ]] ; then
+		((metadeqtddezenas++))
+	fi
+
+	while [[ n -lt qtdjogos ]]; do
+		[[ $n -lt 10 ]] && var="Jogo "0"$n: " || var="Jogo $n: "
+	  	jogos1a30=$(shuf  -i  1-30 -n $metadeqtddezenas | tr -d ',e' | tr -s ' ' | sed 's/ / \n/g' | sort -n | while read a; do printf '%02d ' $a ; done)
+	  	jogos31a60=$(shuf -i 31-60 -n $outrametade      | tr -d ',e' | tr -s ' ' | sed 's/ / \n/g' | sort -n | while read a; do printf '%02d ' $a ; done)
+	  	#echo $jogos1a30 $jogos31a60 # 09 11 14 35 37 50
+	   line="$jogos1a30$jogos31a60"
+
+  	 	if [[ qtddezenas -eq 6 ]] ; then
+			if grep -q -o "$line" $fileresult; then  # jogo existe no BD? descarta!
+				printf 'Jogo (%04d) Dezenas (%02d): ${pink}%s${red}-> foi descartado${reset}\n' "$n" $qtddezenas "$line"
+				continue
+			fi
+		fi
+
+		if grep -q -o "$line" $filejogos; then  # jogo existe? descarta!
+			printf 'Jogo (%04d) Dezenas (%02d): ${pink}%s${red}-> foi descartado${reset}\n' "$n" $qtddezenas "$line"
+			continue
+		fi
+
+		((n++))
+		printf "Jogo (${red}%04d${reset}) ${orange}%02d${reset} dezenas geradas: $pink%s${green}-> foi aceito${reset}\n" "$n" $qtddezenas "$line"
+		echo $line >> $filejogos
+		echo "$var $line" >> $filejogosformatado
+	done
+	filetmp=$(mktemp)
+	sort $filejogos > $filetmp; cp $filetmp $filejogos; rm $filetmp 2> /dev/null
+	#chown www-data $filejogos
+	#chgrp www-data $filejogos
+}
+
+die()
+{
+   local msg=$1; shift
+   printf "${red}$msg${reset}\n" >&2
+   exit 1
+}
+
+msg()
+{
+   local msg=$1; shift
+   printf "${green}$msg${reset}\n" >&2
+   return
+}
+
+erro()
+{
+   local msg=$1; shift
+   printf "${red}$msg${reset}\n" >&2
+   return
+}
+
+sh_checknet()
+{
+   # have internet?
+   msg "${green}Testing internet from ${SITE}"
+ 	curl --insecure $SITE >/dev/null 2>&1 ||
+   {
+      retorno=$?
+	   msg "No route to server ($SITE) - Rodando com BD velho mesmo"
+   }
+   retorno=$?
+	return $retorno
+}
+
+setvarcolors(){
+   if tput setaf 1 &> /dev/null; then
+      tput sgr0; # reset colors
+      bold=$(tput bold);
+      reset=$(tput sgr0);
+      rst=$(tput sgr0);
+      rs=$(tput sgr0);
+      blue=$(tput setaf 33);
+      cyan=$(tput setaf 37);
+      green=$(tput setaf 2);
+      orange=$(tput setaf 166);
+      purple=$(tput setaf 125);
+      red=$(tput setaf 124);
+      violet=$(tput setaf 61);
+      white=$(tput setaf 15);
+      yellow=$(tput setaf 136);
+      pink=$(tput setaf 129);
+      black=$(tput setaf 0);
+   else
+      bold='';
+      reset="\e[0m";
+      rst="\e[0m";
+      rs="\e[0m";
+      reset="\e[0m";
+      blue="\e[1;34m";
+      cyan="\e[1;36m";
+      green="\e[1;32m";
+      orange="\e[1;33m";
+      purple="\e[1;35m";
+      red="\e[1;31m";
+      violet="\e[1;35m";
+      white="\e[1;37m";
+      yellow="\e[1;33m";
+      pink="\033[35;1m";
+      black="\e[1;30m";
+   fi
+}
+
+
+check_deps()
+{
+   local errorFound=0
+   declare -a missing
+
+   for d in "${DEPENDENCIES[@]}"; do
+      [[ -z $(command -v $d) ]] && missing+=($d) && errorFound=1 && printf "${red}ERRO${reset}: não encontrei o comando ${orange}'$d'${reset}\n"
+   done
+   #[[ ${#missing[@]} -ne 0 ]]
+   if (( $errorFound )); then
+   	erro "---IMPOSSÍVEL CONTINUAR---"
+    	msg "Esse script precisa dos comandos listados acima" >&2
+    	msg "Instale-os e/ou verifique se estão no seu \$PATH" >&2
+    	exit 1
+	fi
+}
+
+filesize()
+{
+	local bytes=$(stat -c %s $1)
+	echo $bytes
+}
+
+conf()
+{
+   read -p "$1 [Y/n]"
+   [[ ${REPLY^} == "" ]] && return $true
+   [[ ${REPLY^} == N ]] && return $false || return $true
+}
+
+sh_compare()
+{
+	[[ ! -e $filejogos ]] && { erro "erro: nenhum jogo realizado ainda para comparação."; sh_usage; exit 1;}
+	nsize=$(filesize $filejogos)
+	[[ $nsize -eq 0    ]] && { erro "erro: nenhum jogo realizado ainda para comparação."; sh_usage; exit 1;}
+
+	while read -r i; do
+		if grep -q -o "$i" $fileresult; then
+			echo "$i - FAIL Já tem no BD"
+		else
+			echo "$i - OK não encontrado no BD"
+		fi
+	done < $filejogos
+}
+
+sh_resultadosena()
+{
+	fileUltSort='/tmp/UltSort.txt'
+	fileUltSortAtualiza='/tmp/UltSortAtualiza.txt'
+
+	#### REMOVENDO ARQUIVOS TEMPORARIOS
+	rm $fileUltSort 2> /dev/null
+	rm $fileUltSortAtualiza 2> /dev/null
+
+	sh_checknet; [[ $? = 0 ]] || return 1
+	[[ ! -e $fileresult ]] && >| $fileresult
+
+	#### COLETANDO DADOS DO ULTIMO RESULTADO DA MEGASENA PULICADO PELA API DA CAIXA
+	wget $SITE --no-check-certificate -qO- > $fileUltSort
+	declare -i numUltSort=$(grep '"numero":' $fileUltSort | awk '{print $2}' | sed 's/\,//g' | sed '/^$/d' | sed -e "s/\r//g")
+	#### COLETANDO O NUMERO DO ULTIMO SORTEIO GRAVADO NO BD
+	declare -i numUltSortGrav=$(tail -1 $fileresult | awk -F"-" '{print $1}')
+	#### COLETANDO DADOS DOS DOS RESULTADOS NAO INCLUÍDOS NO BD
+
+	if [[ $numUltSort -eq $numUltSortGrav ]] ; then
+		printf "Sorteios feitos pela CAIXA : ${green}$numUltSort${reset}\n"
+		printf "Sorteios registrados no BD : ${green}$numUltSortGrav${reset}\n"
+		msg "BD está atualizado!"
+		msg "Nenhum registro novo encontrado."
+	else
+		declare -i falta=$(( numUltSort - numUltSortGrav ))
+		printf "Sorteios feitos pela CAIXA : ${red}$numUltSort${reset}\n"
+		printf "Sorteios registrados no BD : ${orange}$numUltSortGrav${reset}\n"
+		msg "${falta} novo(s) registro(s) encontrado(s)!"
+		msg "Atualizando Banco de Dados. Aguarde..."
+		for (( contLinha=$numUltSortGrav+1; contLinha<=$numUltSort; contLinha++ ))
+		do
+:<<'comment'
+			wget $SITE$contLinha --no-check-certificate -qO- > /tmp/UltSortAtualiza.txt
+			listaDezenas=$(cat /tmp/UltSortAtualiza.txt | sed -n '/listaDezenas/,/],/p' | sed 's/[^0-9]//g' | sed -e "s/\r//g" | awk -F"-" '{print $1}')
+			listaDezenas=$(echo $listaDezenas  | cut -c1-18)
+			dataApuracao=$(cat /tmp/UltSortAtualiza.txt | grep  '"dataApuracao":' | awk '{print $2}' | sed 's/\"//g' | sed 's/\,//g' | sed -e "s/\r//g" )
+			valorEstimadoProximoConcurso=$(cat /tmp/UltSortAtualiza.txt | grep  '"valorEstimadoProximoConcurso":' | awk -F"-" '{print $2}' | sed 's/\,//g')
+			dadosSena=$(cat /tmp/UltSortAtualiza.txt | sed -n '/"faixa": 1/,/},/p')
+			dadosQuina=$(cat /tmp/UltSortAtualiza.txt | sed -n '/"faixa": 2/,/},/p')
+			dadosQuadra=$(cat /tmp/UltSortAtualiza.txt | sed -n '/"faixa": 3/,/},/p')
+			numGanhadoresSena=$(echo $dadosSena | awk -F'"' '{ print $5 }' | sed 's/://g' | sed 's/,//g')
+			valorPremioSena=$(echo $dadosSena | awk -F'"' '{print $7}' | sed 's/://g' | sed 's/,//g')
+			valorPremioSena=$(awk '{printf "%.2f\n" ,$1}' <<< "$valorPremioSena")
+			valorPremioSenaFormat=$(echo $valorPremioSena  | sed -e :a -e 's/\(.*[0-9]\)\([0-9]\{3\}\)/\1,\2/;ta' | tr ',.' '.,')
+	    	varLinhaInteira=$(echo $contLinha - $dataApuracao - $listaDezenas - $valorPremioSenaFormat - $numGanhadoresSena)
+	    	echo $varLinhaInteira |& tee -a $fileresult
+comment
+			wget $SITE$contLinha --no-check-certificate -qO- > $fileUltSortAtualiza
+			listaDezenas=$(sed -n '/listaDezenas/,/],/p' $fileUltSortAtualiza | sed 's/[^0-9]//g' | sed -e "s/\r//g" | awk -F"-" '{print $1}')
+			listaDezenas=$(echo $listaDezenas | cut -c1-18)
+			dataApuracao=$(grep '"dataApuracao":' $fileUltSortAtualiza | awk '{print $2}' | sed 's/\"//g' | sed 's/\,//g' | sed -e "s/\r//g" )
+			valorEstimadoProximoConcurso=$(grep '"valorEstimadoProximoConcurso":' $fileUltSortAtualiza | awk -F"-" '{print $2}' | sed 's/\,//g')
+			dadosSena=$(sed -n '/"faixa": 1/,/},/p' $fileUltSortAtualiza)
+			dadosQuina=$(sed -n '/"faixa": 2/,/},/p' $fileUltSortAtualiza)
+			dadosQuadra=$(sed -n '/"faixa": 3/,/},/p' $fileUltSortAtualiza)
+			numGanhadoresSena=$(echo $dadosSena | awk -F'"' '{ print $5 }' | sed 's/://g' | sed 's/,//g')
+			valorPremioSena=$(echo $dadosSena | awk -F'"' '{print $7}' | sed 's/://g' | sed 's/,//g')
+			valorPremioSena=$(awk '{printf "%.2f\n" ,$1}' <<< "$valorPremioSena")
+			valorPremioSenaFormat=$(echo $valorPremioSena  | sed -e :a -e 's/\(.*[0-9]\)\([0-9]\{3\}\)/\1,\2/;ta' | tr ',.' '.,')
+	    	varLinhaInteira=$(echo $contLinha - $dataApuracao - $listaDezenas - $valorPremioSenaFormat - $numGanhadoresSena)
+	    	echo $varLinhaInteira |& tee -a $fileresult
+		done
+		msg "OK. Banco de Dados atualizado!"
+	fi
+	#### REMOVENDO ARQUIVOS TEMPORARIOS
+	rm $fileUltSort 2> /dev/null
+	rm $fileUltSortAtualiza 2> /dev/null
+}
+
+sh_usage()
+{
+	cat <<EOF
+sena $_VERSION usage:
+   sena -h | --help           # este help
+   sena 3                     # jogar 3 jogos
+   sena 10                    # jogar 10 jogos
+   sena 10 6                  # jogar 10 jogos com 6 dezenas
+   sena 5 15                  # jogar 5 jogos com 15 dezenas
+   sena -c | --compare        # comparar jogos
+   sena -U | --update         # atualizar BD
+EOF
+}
+
+check_deps
+setvarcolors
+
+if [[ -z $1 || $1 = @(-h|--help|--version|-V) ]]; then
+   sh_usage
+   exit $(( $# ? 0 : 1 ))
+elif [[ $1 = @(-c|--compare) ]]; then
+   sh_compare
+   exit $(( $# ? 0 : 1 ))
+elif [[ $1 = @(-U|--update) ]]; then
+   sh_resultadosena
+   exit $(( $# ? 0 : 1 ))
+elif test $# -ge 1; then
+	sh_playsena $@
+fi
