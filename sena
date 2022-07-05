@@ -2,7 +2,7 @@
 #  sena - aplicativo para gerar numeros aleatorios da sena
 #
 #  Created: 2022/02/15
-#  Altered: 2022/07/04
+#  Altered: 2022/07/05
 #
 #  Copyright (c) 2022-2022, Benedito Ramos <diramos@uol.com.br>
 #  Copyright (c) 2022-2022, Vilmar Catafesta <vcatafesta@gmail.com>
@@ -32,7 +32,7 @@ filejogos="$cpath/jogos.txt"
 filejogosformatado="$cpath/jogosformatado.txt"
 fileresult="$cpath/resultadosena.txt"
 SITE='https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/'
-_VERSION='1.16.20220705'
+_VERSION='1.17.20220705'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat)
 true=1
 false=0
@@ -219,9 +219,9 @@ sh_compare()
 
 	while read -r i; do
 		if grep -q -o "$i" $fileresult; then
-			echo "$i - FAIL Já tem no BD"
+			echo "$i - ${red}FALHA ↓ Já existe no BD"${reset}
 		else
-			echo "$i - OK não encontrado no BD"
+			echo "$i - ${green}OK ↑ não encontrado no BD"${reset}
 		fi
 	done < $filejogos
 }
