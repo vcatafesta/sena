@@ -32,24 +32,18 @@ filejogos="$cpath/jogos.txt"
 filejogosformatado="$cpath/jogosformatado.txt"
 fileresult="$cpath/resultadosena.txt"
 SITE='https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/'
-_VERSION='1.13.20220704'
+_VERSION='1.16.20220705'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat)
 true=1
 false=0
 
 sh_playsena()
 {
+  	LCONF=1
 	if [[ -e $filejogos ]]; then
-		conf "${red}:: ${reset}Já existe um arquivo de jogos, deseja substituir?"
+		conf "${red}:: ${reset}Existe um arquivo de jogos, deseja substitui-lo?"
    	LCONF=$?
-   else
-   	LCONF=1
    fi
-
-   if (( $LCONF )); then
-		>| $filejogos
-		>| $filejogosformatado
-	fi
 
 	[[ ! -e $fileresult ]] && >| $fileresult
 	declare -i qtdjogos=$1
@@ -60,18 +54,25 @@ sh_playsena()
  	[[ qtddezenas -lt  6 ]] && { erro "erro: mínimo de dezenas jogadas é: 6"; sh_usage; exit 1;}
  	[[ qtddezenas -gt 15 ]] && qtddezenas=15
  	[[ qtddezenas -lt  6 ]] && qtddezenas=6
-	bytes=$(filesize $fileresult); [[ $bytes -eq 0 ]] && { sh_usage; die "erro: necessário atualizar o BD. Use sena --update";} || sh_resultadosena
+	bytes=$(filesize $fileresult); [[ $bytes -eq 0 ]] && { erro "erro: necessário atualizar o BD. Use sena --update"; sh_usage; exit 1;} || sh_resultadosena
 	declare -i resto=$(( qtddezenas % 2 ))
 	declare -i metadeqtddezenas=$(( qtddezenas / 2 ))
 	declare -i outrametade=$metadeqtddezenas
 	declare -i n=0
+	declare -i njogosregistrados=0
+
+   if (( $LCONF )); then
+		>| $filejogos
+		>| $filejogosformatado
+	else
+		njogosregistrados=$(sh_linecount $filejogosformatado)
+	fi
 
  	if [[ resto -gt 0 ]] ; then
 		((metadeqtddezenas++))
 	fi
 
 	while [[ n -lt qtdjogos ]]; do
-		[[ $n -lt 10 ]] && var="Jogo "0"$n: " || var="Jogo $n: "
 	  	jogos1a30=$(shuf  -i  1-30 -n $metadeqtddezenas | tr -d ',e' | tr -s ' ' | sed 's/ / \n/g' | sort -n | while read a; do printf '%02d ' $a ; done)
 	  	jogos31a60=$(shuf -i 31-60 -n $outrametade      | tr -d ',e' | tr -s ' ' | sed 's/ / \n/g' | sort -n | while read a; do printf '%02d ' $a ; done)
 	  	#echo $jogos1a30 $jogos31a60 # 09 11 14 35 37 50
@@ -79,25 +80,32 @@ sh_playsena()
 
   	 	if [[ qtddezenas -eq 6 ]] ; then
 			if grep -q -o "$line" $fileresult; then  # jogo existe no BD? descarta!
-				printf 'Jogo (%04d) Dezenas (%02d): ${pink}%s${red}-> foi descartado${reset}\n' "$n" $qtddezenas "$line"
+	  			printf "Jogo ${red}#%04d${reset} ${orange}%02d${reset} dezenas geradas: $pink%s${red}-> foi descartado${reset}\n" "$n" $qtddezenas "$line"
 				continue
 			fi
 		fi
 
 		if grep -q -o "$line" $filejogos; then  # jogo existe? descarta!
-			printf 'Jogo (%04d) Dezenas (%02d): ${pink}%s${red}-> foi descartado${reset}\n' "$n" $qtddezenas "$line"
+  			printf "Jogo ${red}#%04d${reset} ${orange}%02d${reset} dezenas geradas: $pink%s${red}-> foi descartado${reset}\n" "$n" $qtddezenas "$line"
 			continue
 		fi
 
 		((n++))
-		printf "Jogo (${red}%04d${reset}) ${orange}%02d${reset} dezenas geradas: $pink%s${green}-> foi aceito${reset}\n" "$n" $qtddezenas "$line"
+		((njogosregistrados++))
+		printf "Jogo ${red}#%04d${reset} ${orange}%02d${reset} dezenas geradas: $pink%s${green}-> foi aceito${reset}\n" "$n" $qtddezenas "$line"
 		echo $line >> $filejogos
+		[[ $njogosregistrados -lt 10 ]] && var="Jogo "0"$njogosregistrados: " || var="Jogo $njogosregistrados: "
 		echo "$var $line" >> $filejogosformatado
 	done
 	filetmp=$(mktemp)
 	sort $filejogos > $filetmp; cp $filetmp $filejogos; rm $filetmp 2> /dev/null
 	#chown www-data $filejogos
 	#chgrp www-data $filejogos
+}
+
+sh_linecount()
+{
+   awk 'END {print NR}' $1
 }
 
 die()
@@ -198,7 +206,7 @@ filesize()
 
 conf()
 {
-   read -p "$1 [Y/n]"
+   read -p "$1 [S/n]"
    [[ ${REPLY^} == "" ]] && return $true
    [[ ${REPLY^} == N ]] && return $false || return $true
 }
@@ -240,8 +248,7 @@ sh_resultadosena()
 	if [[ $numUltSort -eq $numUltSortGrav ]] ; then
 		printf "Sorteios feitos pela CAIXA : ${green}$numUltSort${reset}\n"
 		printf "Sorteios registrados no BD : ${green}$numUltSortGrav${reset}\n"
-		msg "BD está atualizado!"
-		msg "Nenhum registro novo encontrado."
+		msg "Nenhum registro novo encontrado. BD está atualizado!"
 	else
 		declare -i falta=$(( numUltSort - numUltSortGrav ))
 		printf "Sorteios feitos pela CAIXA : ${red}$numUltSort${reset}\n"
@@ -291,14 +298,16 @@ comment
 sh_usage()
 {
 	cat <<EOF
-sena $_VERSION usage:
-   sena -h | --help           # este help
-   sena 3                     # jogar 3 jogos
-   sena 10                    # jogar 10 jogos
-   sena 10 6                  # jogar 10 jogos com 6 dezenas
-   sena 5 15                  # jogar 5 jogos com 15 dezenas
-   sena -c | --compare        # comparar jogos
-   sena -U | --update         # atualizar BD
+${white}sena v$_VERSION${reset}
+${orange}uso:${reset}
+   sena ${pink}3${cyan}                     # jogar 03 jogos (padrão 6 dezenas)${reset}
+   sena ${pink}10${cyan}                    # jogar 10 jogos (padrão 6 dezenas)${reset}
+   sena ${pink}10 6${cyan}                  # jogar 10 jogos com 06 (min) dezenas${reset}
+   sena ${pink}5 15${cyan}                  # jogar 05 jogos com 15 (max) dezenas${reset}
+   sena ${pink}-h | --help${cyan}           # este help${reset}
+   sena ${pink}-c | --compare${cyan}        # comparar jogos${reset}
+   sena ${pink}-U | --update${cyan}         # atualizar BD${reset}
+   sena ${pink}-V | --version${cyan}        # mostra versão atual${reset}
 EOF
 }
 
