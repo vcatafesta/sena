@@ -8,3 +8,5 @@
 - 2 - usando wget
 	- wget https://github.com/vcatafesta/sena/raw/main/sena
 	- wget https://github.com/vcatafesta/sena/raw/main/resultadosena.txt
+
+![](https://blauaraujo.com/wp-content/uploads/2022/05/cafezinho-01.png)
