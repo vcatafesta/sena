@@ -17,3 +17,5 @@
 ![](https://chililinux.com/images/sena-03.png)
 ## #sena 10 15
 ![](https://chililinux.com/images/sena-04.png)
+## #sena -c
+![](https://chililinux.com/images/sena-05.png)
