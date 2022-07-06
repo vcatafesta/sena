@@ -1,4 +1,4 @@
-# sena
+# sena - gerador rândomico de jogos da sena
 
 ## Instalação:
 
