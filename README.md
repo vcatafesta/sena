@@ -11,3 +11,5 @@
 
 ![](https://chililinux.com/images/sena-01.png)
 ![](https://chililinux.com/images/sena-02.png)
+![](https://chililinux.com/images/sena-03.png)
+![](https://chililinux.com/images/sena-04.png)
