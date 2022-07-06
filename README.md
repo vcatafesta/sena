@@ -1,4 +1,4 @@
-# sena - gerador randômico de jogos da sena
+# sena - gerador randômico de jogos da megasena
 
 ## Instalação:
 
