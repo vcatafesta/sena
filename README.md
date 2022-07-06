@@ -10,3 +10,4 @@
 	- wget https://github.com/vcatafesta/sena/raw/main/resultadosena.txt
 
 ![](https://chililinux.com/images/sena-01.png)
+![](https://chililinux.com/images/sena-02.png)
