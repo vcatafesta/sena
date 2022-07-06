@@ -38,7 +38,6 @@ _VERSION='1.23.20220706'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat)
 true=1
 false=0
-source /chili/core.sh
 
 sh_playsena()
 {
@@ -47,9 +46,9 @@ sh_playsena()
 		conf "${red}:: ${reset}Existe um arquivo de jogos, deseja substitui-lo?"
    	LCONF=$?
 	   if !(( $LCONF )); then
-	   	msg "Exibindo os ultimos jogos feitos"
-	   	cat $filejogosformatado
-	   	exit
+			msg "Exibindo os ultimos jogos feitos"
+			cat $filejogosformatado
+			exit
 	   fi
    fi
 
