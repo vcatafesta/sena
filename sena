@@ -35,7 +35,7 @@ fileUltSorteio='/tmp/UltSorteio.txt'
 fileUltSorteioAtualizado='/tmp/UltSorteioAtualizado.txt'
 SITE='https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/'
 _VERSION_='1.25.20220707'
-DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput dito)
+DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput)
 true=1
 false=0
 
