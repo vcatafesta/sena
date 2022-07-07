@@ -42,11 +42,11 @@ false=0
 sh_playsena()
 {
 	declare -i qtdjogos=$1
-   [[ $# -gt 2 ]] && { erro "erro: parâmetros em excesso"; sh_usage; exit 1;}
+   [[ $# -gt 2 ]] && { erro "erro: parâmetros em excesso. (use -h for help)"; exit 1;}
    [[ $# -eq 2 ]] && declare -i qtddezenas=$2 || declare -i qtddezenas=6
- 	[[ qtdjogos   -lt 1  ]] && { erro "erro: mínimo de 1 jogo brother!"; sh_usage; exit 1;}
- 	[[ qtddezenas -gt 15 ]] && { erro "erro: máximo de dezenas jogadas é: 15"; sh_usage; exit 1;}
- 	[[ qtddezenas -lt  6 ]] && { erro "erro: mínimo de dezenas jogadas é: 6"; sh_usage; exit 1;}
+ 	[[ qtdjogos   -lt 1  ]] && { erro "erro: mínimo de 1 jogo brother! (use -h for help)"; exit 1;}
+ 	[[ qtddezenas -gt 15 ]] && { erro "erro: máximo de dezenas jogadas é: 15. (use -h for help)"; exit 1;}
+ 	[[ qtddezenas -lt  6 ]] && { erro "erro: mínimo de dezenas jogadas é: 6. (use -h for help)"; exit 1;}
  	[[ qtddezenas -gt 15 ]] && qtddezenas=15
  	[[ qtddezenas -lt  6 ]] && qtddezenas=6
 
@@ -62,7 +62,7 @@ sh_playsena()
    fi
 
 	[[ ! -e $fileresult ]] && >| $fileresult
-	bytes=$(filesize $fileresult); [[ $bytes -eq 0 ]] && { erro "erro: necessário atualizar o BD. Use sena --update"; sh_usage; exit 1;} || sh_resultadosena
+	bytes=$(filesize $fileresult); [[ $bytes -eq 0 ]] && { erro "erro: necessário atualizar o BD. (use -h for help)"; exit 1;} || sh_resultadosena
 	declare -i resto=$(( qtddezenas % 2 ))
 	declare -i metadeqtddezenas=$(( qtddezenas / 2 ))
 	declare -i outrametade=$metadeqtddezenas
@@ -221,9 +221,9 @@ conf()
 
 sh_compare()
 {
-	[[ ! -e $filejogos ]] && { erro "erro: nenhum jogo realizado ainda para comparação."; sh_usage; exit 1;}
+	[[ ! -e $filejogos ]] && { erro "erro: nenhum jogo realizado ainda para comparação. (use -h for help)"; exit 1;}
 	nsize=$(filesize $filejogos)
-	[[ $nsize -eq 0    ]] && { erro "erro: nenhum jogo realizado ainda para comparação."; sh_usage; exit 1;}
+	[[ $nsize -eq 0    ]] && { erro "erro: nenhum jogo realizado ainda para comparação. (use -h for help)"; exit 1;}
 
 	while read -r i; do
 		if grep -q -o "$i" $fileresult; then
@@ -368,10 +368,10 @@ init()
    		-V|--version) sh_logo; exit $(( $# ? 0 : 1 ));;
    		-j|--jogo)
 				shift;
-   			[[ $# -lt 1 ]] && { erro "erro: requer argumento/parâmetro"; sh_usage; exit 1;}
-				ctype1=$(sh_val $1);	[[ $ctype1 != "N" ]] && { erro "erro: primeiro parâmetro deve ser numérico"; sh_usage; exit 1;}
+   			[[ $# -lt 1 ]] && { erro "erro: requer argumento/parâmetro. (use -h for help)"; exit 1;}
+				ctype1=$(sh_val $1);	[[ $ctype1 != "N" ]] && { erro "erro: primeiro parâmetro deve ser numérico. (use -h for help)"; exit 1;}
    			if test $# -eq 2; then
-   				ctype2=$(sh_val $2);	[[ $ctype2 != "N" ]] && { erro "erro: segundo parâmetro deve ser numérico"; sh_usage; exit 1;}
+   				ctype2=$(sh_val $2);	[[ $ctype2 != "N" ]] && { erro "erro: segundo parâmetro deve ser numérico. (use -h for help)"; exit 1;}
 	  			fi
  				sh_playsena "$@"
  				exit $(( $# ? 0 : 1 ))
