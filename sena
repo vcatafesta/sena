@@ -34,8 +34,8 @@ fileresult="$cpath/resultadosena.txt"
 fileUltSorteio='/tmp/UltSorteio.txt'
 fileUltSorteioAtualizado='/tmp/UltSorteioAtualizado.txt'
 SITE='https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/'
-_VERSION_='1.24.20220707'
-DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat)
+_VERSION_='1.25.20220707'
+DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput dito)
 true=1
 false=0
 
@@ -198,7 +198,7 @@ check_deps()
    done
    #[[ ${#missing[@]} -ne 0 ]]
    if (( $errorFound )); then
-   	erro "---IMPOSSÍVEL CONTINUAR---"
+   	erro "#### IMPOSSÍVEL CONTINUAR ####"
     	msg "Esse script precisa dos comandos listados acima" >&2
     	msg "Instale-os e/ou verifique se estão no seu \$PATH" >&2
     	exit 1
@@ -372,7 +372,7 @@ init()
    done
 }
 
-check_deps
 setvarcolors
+check_deps
 [[ -z $1 ]] && { sh_usage; exit $(( $# ? 0 : 1 ));}
 init $@
