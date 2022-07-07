@@ -27,14 +27,14 @@
 #     gettext, gpg, grep, gzip, sed, tput (ncurses), xz, etc
 #########################################################################
 #global
-cpath=$PWD
-filejogos="$cpath/jogos.txt"
-filejogosformatado="$cpath/jogosformatado.txt"
-fileresult="$cpath/resultadosena.txt"
+CPATH=$PWD
+filejogos="$CPATH/jogos.txt"
+filejogosformatado="$CPATH/jogosformatado.txt"
+fileresult="$CPATH/resultadosena.txt"
 fileUltSorteio='/tmp/UltSorteio.txt'
 fileUltSorteioAtualizado='/tmp/UltSorteioAtualizado.txt'
 SITE='https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/'
-_VERSION_='1.25.20220707'
+_VERSION_='1.27.20220707'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput)
 true=1
 false=0
@@ -55,8 +55,10 @@ sh_playsena()
 		conf "${red}:: ${reset}Existe um arquivo de jogos, deseja substitui-lo?"
    	LCONF=$?
 	   if !(( $LCONF )); then
+			msg "Detalhes do arquivo de jogos feito"
+			stat $filejogos
 			msg "Exibindo os ultimos jogos feitos"
-			cat $filejogosformatado
+			cat $filejogos
 			exit
 	   fi
    fi
@@ -71,7 +73,6 @@ sh_playsena()
 
    if (( $LCONF )); then
 		>| $filejogos
-		>| $filejogosformatado
 	else
 		njogosregistrados=$(sh_linecount $filejogosformatado)
 	fi
@@ -103,7 +104,7 @@ sh_playsena()
 		printf "Jogo ${red}#%04d${reset} ${orange}%02d${reset} dezenas geradas: $pink%s${green}-> foi aceito${reset}\n" "$n" $qtddezenas "$line"
 		echo $line >> $filejogos
 		[[ $njogosregistrados -lt 10 ]] && var="Jogo "0"$njogosregistrados: " || var="Jogo $njogosregistrados: "
-		echo "$var $line" >> $filejogosformatado
+		echo "$(date +"%d/%m/%Y %T") $var $line" >> $filejogosformatado
 	done
 	filetmp=$(mktemp)
 	sort $filejogos > $filetmp; cp $filetmp $filejogos; rm $filetmp 2> /dev/null
@@ -331,6 +332,11 @@ sh_val()
 	fi
 }
 
+sh_listarjogos()
+{
+	more $filejogosformatado
+}
+
 sh_usage()
 {
 	cat <<EOF
@@ -342,6 +348,7 @@ ${orange}uso:${reset}
    sena ${pink}-j 5 15${cyan}             # jogar 05 jogos com 15 (max) dezenas${reset}
    sena ${pink}-h|--help${cyan}           # este help${reset}
    sena ${pink}-c|--compare${cyan}        # comparar jogos${reset}
+   sena ${pink}-l|--log${cyan}            # list log de jogos${reset}
    sena ${pink}-U|--update${cyan}         # atualizar BD${reset}
    sena ${pink}-V|--version${cyan}        # mostra versão atual${reset}
 EOF
@@ -354,6 +361,7 @@ init()
       case "${1}" in
 		   -h|--help) sh_usage; exit $(( $# ? 0 : 1 ));;
    		-c|--compare) sh_compare; exit $(( $# ? 0 : 1 ));;
+   		-l|--log) sh_listarjogos; exit $(( $# ? 0 : 1 ));;
    		-U|--update) sh_resultadosena; exit $(( $# ? 0 : 1 ));;
    		-V|--version) sh_logo; exit $(( $# ? 0 : 1 ));;
    		-j|--jogo)
