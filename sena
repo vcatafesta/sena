@@ -238,24 +238,20 @@ sh_compare()
 sh_atualizaBD()
 {
 	contLinha=$1
-
-#		for (( contLinha=$numUltSorteioGravado+1; contLinha<=$numUltSorteio; contLinha++ ))
-#		do
-			wget $SITE$contLinha --no-check-certificate -qO- > $fileUltSorteioAtualizado
-			listaDezenas=$(sed -n '/listaDezenas/,/],/p' $fileUltSorteioAtualizado | sed 's/[^0-9]//g' | sed -e "s/\r//g" | awk -F"-" '{print $1}')
-			listaDezenas=$(echo $listaDezenas | cut -c1-18)
-			dataApuracao=$(grep '"dataApuracao":' $fileUltSorteioAtualizado | awk '{print $2}' | sed 's/\"//g' | sed 's/\,//g' | sed -e "s/\r//g" )
-			valorEstimadoProximoConcurso=$(grep '"valorEstimadoProximoConcurso":' $fileUltSorteioAtualizado | awk -F"-" '{print $2}' | sed 's/\,//g')
-			dadosSena=$(sed -n '/"faixa": 1/,/},/p' $fileUltSorteioAtualizado)
-			dadosQuina=$(sed -n '/"faixa": 2/,/},/p' $fileUltSorteioAtualizado)
-			dadosQuadra=$(sed -n '/"faixa": 3/,/},/p' $fileUltSorteioAtualizado)
-			numGanhadoresSena=$(echo $dadosSena | awk -F'"' '{ print $5 }' | sed 's/://g' | sed 's/,//g')
-			valorPremioSena=$(echo $dadosSena | awk -F'"' '{print $7}' | sed 's/://g' | sed 's/,//g')
-			valorPremioSena=$(awk '{printf "%.2f\n" ,$1}' <<< "$valorPremioSena")
-			valorPremioSenaFormat=$(echo $valorPremioSena  | sed -e :a -e 's/\(.*[0-9]\)\([0-9]\{3\}\)/\1,\2/;ta' | tr ',.' '.,')
-	    	varLinhaInteira=$(echo $contLinha - $dataApuracao - $listaDezenas - $valorPremioSenaFormat - $numGanhadoresSena)
-	    	echo $varLinhaInteira |& tee -a $fileresult
-#		done
+	wget $SITE$contLinha --no-check-certificate -qO- > $fileUltSorteioAtualizado
+	listaDezenas=$(sed -n '/listaDezenas/,/],/p' $fileUltSorteioAtualizado | sed 's/[^0-9]//g' | sed -e "s/\r//g" | awk -F"-" '{print $1}')
+	listaDezenas=$(echo $listaDezenas | cut -c1-18)
+	dataApuracao=$(grep '"dataApuracao":' $fileUltSorteioAtualizado | awk '{print $2}' | sed 's/\"//g' | sed 's/\,//g' | sed -e "s/\r//g" )
+	valorEstimadoProximoConcurso=$(grep '"valorEstimadoProximoConcurso":' $fileUltSorteioAtualizado | awk -F"-" '{print $2}' | sed 's/\,//g')
+	dadosSena=$(sed -n '/"faixa": 1/,/},/p' $fileUltSorteioAtualizado)
+	dadosQuina=$(sed -n '/"faixa": 2/,/},/p' $fileUltSorteioAtualizado)
+	dadosQuadra=$(sed -n '/"faixa": 3/,/},/p' $fileUltSorteioAtualizado)
+	numGanhadoresSena=$(echo $dadosSena | awk -F'"' '{ print $5 }' | sed 's/://g' | sed 's/,//g')
+	valorPremioSena=$(echo $dadosSena | awk -F'"' '{print $7}' | sed 's/://g' | sed 's/,//g')
+	valorPremioSena=$(awk '{printf "%.2f\n" ,$1}' <<< "$valorPremioSena")
+	valorPremioSenaFormat=$(echo $valorPremioSena  | sed -e :a -e 's/\(.*[0-9]\)\([0-9]\{3\}\)/\1,\2/;ta' | tr ',.' '.,')
+  	varLinhaInteira=$(echo $contLinha - $dataApuracao - $listaDezenas - $valorPremioSenaFormat - $numGanhadoresSena)
+  	echo $varLinhaInteira |& tee -a $fileresult
 }
 
 sh_checkresultadosfaltantes()
@@ -287,29 +283,22 @@ sh_resultadosena()
 
 	#### COLETANDO DADOS DO ULTIMO RESULTADO DA MEGASENA PULICADO PELA API DA CAIXA
 	wget $SITE --no-check-certificate -qO- > $fileUltSorteio
-	#declare -i numUltSorteio=$(grep '"numero":' $fileUltSorteio | awk '{print $2}' | sed 's/\,//g' | sed '/^$/d' | sed -e "s/\r//g")
 	declare -i numUltSorteio=$(awk '/["]numero["]:/ {print $2}' $fileUltSorteio | sed 's/\,//g' | sed '/^$/d' | sed -e "s/\r//g")
 
 	#### COLETANDO O NUMERO DO ULTIMO SORTEIO GRAVADO NO BD
-#	declare -i numUltSorteioGravado=$(tail -1 $fileresult | awk -F"-" '{print $1}')
 	declare -i numUltSorteioGravado=$(awk 'END {print NR}' $fileresult)
-	#### COLETANDO DADOS DOS DOS RESULTADOS NAO INCLUÍDOS NO BD
 
-#	if [[ $numUltSorteio -eq $numUltSorteioGravado ]] ; then
-#		printf "Sorteios feitos pela CAIXA : ${green}$numUltSorteio${reset}\n"
-#		printf "Sorteios registrados no BD : ${green}$numUltSorteioGravado${reset}\n"
-#		msg "Nenhum registro novo encontrado. BD está atualizado!"
-#	else
-		declare -i falta=$(( numUltSorteio - numUltSorteioGravado ))
-		printf "Sorteios feitos pela CAIXA : ${red}$numUltSorteio${reset}\n"
-		printf "Sorteios registrados no BD : ${orange}$numUltSorteioGravado${reset}\n"
-		msg "${falta} novo(s) registro(s) encontrado(s)!"
-		sh_checkresultadosfaltantes $numUltSorteio
-		sort -g -u $fileresult > $fileresult.sort
-		cp $fileresult.sort $fileresult
-		rm -f $fileresult.sort
-		msg "OK. Banco de Dados atualizado!"
-#	fi
+	#### COLETANDO DADOS DOS DOS RESULTADOS NAO INCLUÍDOS NO BD
+	declare -i falta=$(( numUltSorteio - numUltSorteioGravado ))
+	printf "Sorteios feitos pela CAIXA : ${red}$numUltSorteio${reset}\n"
+	printf "Sorteios registrados no BD : ${orange}$numUltSorteioGravado${reset}\n"
+	msg "${falta} novo(s) registro(s) encontrado(s)!"
+	sh_checkresultadosfaltantes $numUltSorteio
+	sort -g -u $fileresult > $fileresult.sort
+	cp $fileresult.sort $fileresult
+	rm -f $fileresult.sort
+	msg "OK. Banco de Dados atualizado!"
+
 	#### REMOVENDO ARQUIVOS TEMPORARIOS
 	rm $fileUltSorteio 2> /dev/null
 	rm $fileUltSorteioAtualizado 2> /dev/null
@@ -387,4 +376,3 @@ check_deps
 setvarcolors
 [[ -z $1 ]] && { sh_usage; exit $(( $# ? 0 : 1 ));}
 init $@
-
