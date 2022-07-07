@@ -34,7 +34,7 @@ fileresult="$cpath/resultadosena.txt"
 fileUltSorteio='/tmp/UltSorteio.txt'
 fileUltSorteioAtualizado='/tmp/UltSorteioAtualizado.txt'
 SITE='https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/'
-_VERSION_='1.22.20220707'
+_VERSION_='1.23.20220707'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat)
 true=1
 false=0
@@ -215,7 +215,9 @@ conf()
 {
    read -p "$1 [S/n]"
    [[ ${REPLY^} == "" ]] && return $true
-   [[ ${REPLY^} == N ]] && return $false || return $true
+   [[ ${REPLY^} == "S" ]] && return $true
+   [[ ${REPLY^} == N ]] && return $false
+   die "erro: resposta deve ser S ou N"
 }
 
 sh_compare()
