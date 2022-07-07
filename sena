@@ -34,7 +34,7 @@ fileresult="$cpath/resultadosena.txt"
 fileUltSorteio='/tmp/UltSorteio.txt'
 fileUltSorteioAtualizado='/tmp/UltSorteioAtualizado.txt'
 SITE='https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/'
-_VERSION_='1.23.20220707'
+_VERSION_='1.24.20220707'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat)
 true=1
 false=0
@@ -88,13 +88,13 @@ sh_playsena()
 
   	 	if [[ qtddezenas -eq 6 ]] ; then
 			if grep -q -o "$line" $fileresult; then  # jogo existe no BD? descarta!
-	  			printf "Jogo ${red}#%04d${reset} ${orange}%02d${reset} dezenas geradas: $pink%s${red}-> foi descartado${reset}\n" "$n" $qtddezenas "$line"
+	  			printf "Jogo ${red}#%04d${reset} ${orange}%02d${reset} dezenas geradas: $pink%s${red}-> foi descartado, já existe no BD!${reset}\n" "$n" $qtddezenas "$line"
 				continue
 			fi
 		fi
 
 		if grep -q -o "$line" $filejogos; then  # jogo existe? descarta!
-  			printf "Jogo ${red}#%04d${reset} ${orange}%02d${reset} dezenas geradas: $pink%s${red}-> foi descartado${reset}\n" "$n" $qtddezenas "$line"
+  			printf "Jogo ${red}#%04d${reset} ${orange}%02d${reset} dezenas geradas: $pink%s${red}-> foi descartado, já existe no jogo atual!${reset}\n" "$n" $qtddezenas "$line"
 			continue
 		fi
 
