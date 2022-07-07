@@ -2,7 +2,7 @@
 #  sena - aplicativo para gerar numeros aleatorios da sena
 #
 #  Created: 2022/02/15
-#  Altered: 2022/07/06
+#  Altered: 2022/07/07
 #
 #  Copyright (c) 2022-2022, Benedito Ramos <diramos@uol.com.br>
 #  Copyright (c) 2022-2022, Vilmar Catafesta <vcatafesta@gmail.com>
@@ -34,13 +34,22 @@ fileresult="$cpath/resultadosena.txt"
 fileUltSorteio='/tmp/UltSorteio.txt'
 fileUltSorteioAtualizado='/tmp/UltSorteioAtualizado.txt'
 SITE='https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/'
-_VERSION='1.23.20220706'
+_VERSION_='1.20.20220707'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat)
 true=1
 false=0
 
 sh_playsena()
 {
+	declare -i qtdjogos=$1
+   [[ $# -gt 2 ]] && { erro "erro: parâmetros em excesso"; sh_usage; exit 1;}
+   [[ $# -eq 2 ]] && declare -i qtddezenas=$2 || declare -i qtddezenas=6
+ 	[[ qtdjogos   -lt 1  ]] && { erro "erro: mínimo de 1 jogo brother!"; sh_usage; exit 1;}
+ 	[[ qtddezenas -gt 15 ]] && { erro "erro: máximo de dezenas jogadas é: 15"; sh_usage; exit 1;}
+ 	[[ qtddezenas -lt  6 ]] && { erro "erro: mínimo de dezenas jogadas é: 6"; sh_usage; exit 1;}
+ 	[[ qtddezenas -gt 15 ]] && qtddezenas=15
+ 	[[ qtddezenas -lt  6 ]] && qtddezenas=6
+
   	LCONF=1
 	if [[ -e $filejogos ]]; then
 		conf "${red}:: ${reset}Existe um arquivo de jogos, deseja substitui-lo?"
@@ -53,14 +62,6 @@ sh_playsena()
    fi
 
 	[[ ! -e $fileresult ]] && >| $fileresult
-	declare -i qtdjogos=$1
-   [[ $# -gt 2 ]] && { erro "erro: parâmetros em excesso"; sh_usage; exit 1;}
-   [[ $# -eq 2 ]] && declare -i qtddezenas=$2 || declare -i qtddezenas=6
- 	[[ qtdjogos   -lt 1  ]] && { erro "erro: mínimo de 1 jogo brother!"; sh_usage; exit 1;}
- 	[[ qtddezenas -gt 15 ]] && { erro "erro: máximo de dezenas jogadas é: 15"; sh_usage; exit 1;}
- 	[[ qtddezenas -lt  6 ]] && { erro "erro: mínimo de dezenas jogadas é: 6"; sh_usage; exit 1;}
- 	[[ qtddezenas -gt 15 ]] && qtddezenas=15
- 	[[ qtddezenas -lt  6 ]] && qtddezenas=6
 	bytes=$(filesize $fileresult); [[ $bytes -eq 0 ]] && { erro "erro: necessário atualizar o BD. Use sena --update"; sh_usage; exit 1;} || sh_resultadosena
 	declare -i resto=$(( qtddezenas % 2 ))
 	declare -i metadeqtddezenas=$(( qtddezenas / 2 ))
@@ -313,34 +314,76 @@ sh_resultadosena()
 	rm $fileUltSorteioAtualizado 2> /dev/null
 }
 
+sh_version()
+{
+   printf "${orange}${0##*/} v${_VERSION_}\n"
+}
+
+sh_logo()
+{
+   cat << 'EOF'
+   ________  ____  ____ _
+  / ___/ _ \/ __ \/ __ `/
+ (__  )  __/ / / / /_/ /
+/____/\___/_/ /_/\__,_/
+EOF
+	sh_version
+}
+
+sh_val()
+{
+	if [[ ${1} =~ ^([0-9]+)$ ]];then
+		echo "N"
+	elif [[ ${1} =~ ^([[:alpha:]]+)$ ]];then
+		echo "C"
+	else
+		echo "U"
+	fi
+}
+
 sh_usage()
 {
 	cat <<EOF
-${white}sena v$_VERSION${reset}
+${white}sena v$_VERSION_${reset}
 ${orange}uso:${reset}
-   sena ${pink}3${cyan}                     # jogar 03 jogos (padrão 6 dezenas)${reset}
-   sena ${pink}10${cyan}                    # jogar 10 jogos (padrão 6 dezenas)${reset}
-   sena ${pink}10 6${cyan}                  # jogar 10 jogos com 06 (min) dezenas${reset}
-   sena ${pink}5 15${cyan}                  # jogar 05 jogos com 15 (max) dezenas${reset}
-   sena ${pink}-h | --help${cyan}           # este help${reset}
-   sena ${pink}-c | --compare${cyan}        # comparar jogos${reset}
-   sena ${pink}-U | --update${cyan}         # atualizar BD${reset}
-   sena ${pink}-V | --version${cyan}        # mostra versão atual${reset}
+   sena ${pink}-j 3${cyan}                # jogar 03 jogos (padrão 6 dezenas)${reset}
+   sena ${pink}-j 10${cyan}               # jogar 10 jogos (padrão 6 dezenas)${reset}
+   sena ${pink}-j 10 6${cyan}             # jogar 10 jogos com 06 (min) dezenas${reset}
+   sena ${pink}-j 5 15${cyan}             # jogar 05 jogos com 15 (max) dezenas${reset}
+   sena ${pink}-h|--help${cyan}           # este help${reset}
+   sena ${pink}-c|--compare${cyan}        # comparar jogos${reset}
+   sena ${pink}-U|--update${cyan}         # atualizar BD${reset}
+   sena ${pink}-V|--version${cyan}        # mostra versão atual${reset}
 EOF
+}
+
+init()
+{
+   while test $# -gt 0
+   do
+      case "${1}" in
+		   -h|--help) sh_usage; exit $(( $# ? 0 : 1 ));;
+   		-c|--compare) sh_compare; exit $(( $# ? 0 : 1 ));;
+   		-U|--update) sh_resultadosena; exit $(( $# ? 0 : 1 ));;
+   		-V|--version) sh_logo; exit $(( $# ? 0 : 1 ));;
+   		-j|--jogo)
+				shift;
+   			[[ $# -lt 1 ]] && { erro "erro: requer argumento/parâmetro"; sh_usage; exit 1;}
+				ctype1=$(sh_val $1);	[[ $ctype1 != "N" ]] && { erro "erro: primeiro parâmetro deve ser numérico"; sh_usage; exit 1;}
+   			if test $# -eq 2; then
+   				ctype2=$(sh_val $2);	[[ $ctype2 != "N" ]] && { erro "erro: segundo parâmetro deve ser numérico"; sh_usage; exit 1;}
+	  			fi
+ 				sh_playsena "$@"
+ 				exit $(( $# ? 0 : 1 ))
+ 				;;
+         *)  die "operação não suportada: $1 (use -h for help)";;
+      esac
+      shift
+   done
 }
 
 check_deps
 setvarcolors
+[[ -z $1 ]] && { sh_usage; exit $(( $# ? 0 : 1 ));}
+init $@
 
-if [[ -z $1 || $1 = @(-h|--help|--version|-V) ]]; then
-   sh_usage
-   exit $(( $# ? 0 : 1 ))
-elif [[ $1 = @(-c|--compare) ]]; then
-   sh_compare
-   exit $(( $# ? 0 : 1 ))
-elif [[ $1 = @(-U|--update) ]]; then
-   sh_resultadosena
-   exit $(( $# ? 0 : 1 ))
-elif test $# -ge 1; then
-	sh_playsena $@
-fi
