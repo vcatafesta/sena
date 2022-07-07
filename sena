@@ -34,7 +34,7 @@ fileresult="$CPATH/resultadosena.txt"
 fileUltSorteio='/tmp/UltSorteio.txt'
 fileUltSorteioAtualizado='/tmp/UltSorteioAtualizado.txt'
 SITE='https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/'
-_VERSION_='1.27.20220707'
+_VERSION_='1.28.20220707'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput)
 true=1
 false=0
@@ -334,6 +334,7 @@ sh_val()
 
 sh_listarjogos()
 {
+	[[ ! -e $filejogosformatado ]] && die "erro: arquivo de log ainda não existe. (use -h for help)"
 	more $filejogosformatado
 }
 
