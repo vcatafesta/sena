@@ -2,7 +2,7 @@
 #  sena - aplicativo para gerar numeros aleatorios da sena
 #
 #  Created: 2022/02/15
-#  Altered: 2022/07/07
+#  Altered: 2022/07/08
 #
 #  Copyright (c) 2022-2022, Benedito Ramos <diramos@uol.com.br>
 #  Copyright (c) 2022-2022, Vilmar Catafesta <vcatafesta@gmail.com>
@@ -34,10 +34,12 @@ fileresult="$CPATH/resultadosena.txt"
 fileUltSorteio='/tmp/UltSorteio.txt'
 fileUltSorteioAtualizado='/tmp/UltSorteioAtualizado.txt'
 SITE='https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/'
-_VERSION_='1.28.20220707'
+_VERSION_='1.50.20220708'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput)
 true=1
 false=0
+IFS=$' \t\n'
+SAVEIFS=$IFS
 
 sh_playsena()
 {
@@ -227,6 +229,7 @@ sh_compare()
 	nsize=$(filesize $filejogos)
 	[[ $nsize -eq 0    ]] && { erro "erro: nenhum jogo realizado ainda para comparação. (use -h for help)"; exit 1;}
 
+:<<'comment'
 	while read -r i; do
 		if grep -q -o "$i" $fileresult; then
 			echo "$i - ${red}FALHA ↓ Já existe no BD"${reset}
@@ -234,6 +237,34 @@ sh_compare()
 			echo "$i - ${green}OK ↑ não encontrado no BD"${reset}
 		fi
 	done < $filejogos
+comment
+
+	IFS=$'\n'
+	local re='[0-9]{2}[ ]?'
+	local aResult=($(awk -F'-' '{ print $3 }' $fileresult))
+	#local aJogos=($(awk -F "$re" 'lista[$1]++' $filejogos))
+	local aJogos=($(awk '{print " "$0}' $filejogos))
+	local n=1
+	local value
+
+:<<'comment'
+	info "${aJogos[*]}"
+	echo
+	echo "${aJogos[0]}"
+	echo "${aJogos[1]}"
+comment
+
+	for value in ${aJogos[*]}
+	do
+	   #info "$value"
+	   if [[ ! "${aResult[*]}" =~ "${value}" ]]; then
+	      printf "Jogo (${pink}$n${rs}) $value - ${green}OK ↑ não encontrado no BD${reset}\n"
+	   else
+	      printf "Jogo (${pink}$n${rs}) $value - ${red}FALHA ↓ Já existe no BD${reset}\n"
+	   fi
+	   ((n++))
+	done
+	IFS=$SAVEIFS
 }
 
 sh_atualizaBD()
@@ -259,17 +290,21 @@ sh_checkresultadosfaltantes()
 {
 	local -i numUltSorteioGravado=$1
 	local -i n=0
+	local value
+	local array
 
 	msg "Checando a integridade do BD. Aguarde..."
-	for i in $(seq $numUltSorteioGravado)
+	local array=($(awk '{ print $1 }' $fileresult))
+
+	for value in $(seq $numUltSorteioGravado)
 	do
-		if ! grep -q -o "^$i " $fileresult; then  # jogo não existe no BD?
+   	if [[ ! " ${array[*]} " =~ " ${value} " ]]; then
 			if !(( $n )); then
 				msg "Atualizando Banco de Dados. Aguarde..."
 			fi
 			((n++))
-			sh_atualizaBD "$i"
-		fi
+			sh_atualizaBD "$value"
+	   fi
 	done
 }
 
