@@ -334,7 +334,7 @@ sh_val()
 
 sh_listarjogos()
 {
-	[[ ! -e $filejogosformatado ]] && die "erro: arquivo de log ainda não existe. (use -h for help)"
+	[[ ! -e $filejogosformatado ]] && die "erro: arquivo log de jogos ainda não existe. Faça alguns jogos primeiro. (use -h for help)"
 	more $filejogosformatado
 }
 
