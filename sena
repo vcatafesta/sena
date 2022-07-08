@@ -34,8 +34,8 @@ fileresult="$CPATH/resultadosena.txt"
 fileUltSorteio='/tmp/UltSorteio.txt'
 fileUltSorteioAtualizado='/tmp/UltSorteioAtualizado.txt'
 SITE='https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/'
-_VERSION_='1.53.20220708'
-DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput)
+_VERSION_='1.54.20220708'
+DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat)
 true=1
 false=0
 IFS=$' \t\n'
@@ -286,8 +286,9 @@ sh_compare()
 	nsize=$(filesize $filejogos)
 	[[ $nsize -eq 0    ]] && { erro "erro: nenhum jogo realizado ainda para comparação. (use -h for help)"; exit 1;}
 
+	msg "Fazendo chegagem das jogadas. Aguarde..."
 	if ! value=$(grep -s -o -f $filejogos $fileresult); then
-		printf "Jogos ${cyan}\n$value\n${green}OK ↑ não encontrado(s) no BD${reset}\n"
+		printf "${green}OK ↑ nenhuma jogada armazenada foi encontrada no BD${reset}\n"
 	else
 		printf "Jogos ${cyan}\n$value\n${red}FALHA ↓ Já existe(m) no BD${reset}\n"
 	fi
