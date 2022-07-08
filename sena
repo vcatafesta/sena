@@ -34,12 +34,14 @@ fileresult="$CPATH/resultadosena.txt"
 fileUltSorteio='/tmp/UltSorteio.txt'
 fileUltSorteioAtualizado='/tmp/UltSorteioAtualizado.txt'
 SITE='https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/'
-_VERSION_='1.50.20220708'
+_VERSION_='1.51.20220708'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput)
 true=1
 false=0
 IFS=$' \t\n'
 SAVEIFS=$IFS
+
+[ -e /chili/core.sh ] && source /chili/core.sh
 
 sh_playsena()
 {
@@ -160,17 +162,17 @@ setvarcolors(){
       reset=$(tput sgr0);
       rst=$(tput sgr0);
       rs=$(tput sgr0);
-      blue=$(tput setaf 33);
-      cyan=$(tput setaf 37);
-      green=$(tput setaf 2);
-      orange=$(tput setaf 166);
-      purple=$(tput setaf 125);
-      red=$(tput setaf 124);
-      violet=$(tput setaf 61);
-      white=$(tput setaf 15);
-      yellow=$(tput setaf 136);
-      pink=$(tput setaf 129);
       black=$(tput setaf 0);
+      red=$(tput setaf 1);
+      green=$(tput setaf 2);
+      yellow=$(tput setaf 3);
+      blue=$(tput setaf 4);
+      pink=$(tput setaf 5);
+      cyan=$(tput setaf 6);
+      white=$(tput setaf 7);
+      orange=$(tput setaf 3);
+      purple=$(tput setaf 125);
+      violet=$(tput setaf 61);
    else
       bold='';
       reset="\e[0m";
