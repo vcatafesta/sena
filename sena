@@ -34,7 +34,7 @@ fileresult="$CPATH/resultadosena.txt"
 fileUltSorteio='/tmp/UltSorteio.txt'
 fileUltSorteioAtualizado='/tmp/UltSorteioAtualizado.txt'
 SITE='https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/'
-_VERSION_='1.52.20220708'
+_VERSION_='1.53.20220708'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput)
 true=1
 false=0
@@ -56,7 +56,9 @@ sh_playsena()
 
   	LCONF=1
 	if [[ -e $filejogos ]]; then
-		conf "${red}:: ${reset}Existe um arquivo de jogos, deseja substitui-lo?"
+		cfiledatahora=$(stat -c %w $filejogos)
+		njogos=$(sh_linecount $filejogos)
+		conf "${red}:: ${reset}Existe arquivo de jogos gerado em: ${yellow}$cfiledatahora${reset} com ${red}$njogos${reset} palpites. Deseja substitui-lo?"
    	LCONF=$?
 	   if !(( $LCONF )); then
 			msg "Detalhes do arquivo de jogos feito"
