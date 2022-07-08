@@ -241,9 +241,14 @@ comment
 
 	IFS=$'\n'
 	local re='[0-9]{2}[ ]?'
-	local aResult=($(awk -F'-' '{ print $3 }' $fileresult))
-	#local aJogos=($(awk -F "$re" 'lista[$1]++' $filejogos))
-	local aJogos=($(awk '{print " "$0}' $filejogos))
+	local reR='([0-9]{2}[ ])+((?1))+'
+	local reJ='([0-9]{2}[ ])?((?1))+'
+#	local aResult=($(awk -F'-' '{ print $3 }' $fileresult))
+#	local aJogos=($(awk '{print " "$0}' $filejogos))
+#	local aResult=($(awk -F "$reR" 'lista[$1]++' $fileresult))
+#	local aJogos=($(awk -F "$reJ" 'lista[$1]++' $filejogos))
+	local aResult=($(grep -Po "$reR" $fileresult))
+	local aJogos=($(grep -Po "$reJ" $filejogos))
 	local n=1
 	local value
 
