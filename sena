@@ -228,7 +228,7 @@ conf()
    die "erro: resposta deve ser S ou N"
 }
 
-sh_comparearray()
+sh_compare()
 {
 	[[ ! -e $filejogos ]] && { erro "erro: nenhum jogo realizado ainda para comparação. (use -h for help)"; exit 1;}
 	nsize=$(filesize $filejogos)
@@ -277,7 +277,7 @@ comment
 	IFS=$SAVEIFS
 }
 
-sh_compare()
+sh_compareGREP()
 {
 	local re='[0-9]{2}[ ]?'
 	local reR='([0-9]{2}[ ])+((?1))+'
