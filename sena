@@ -2,7 +2,7 @@
 #  sena - aplicativo para gerar numeros aleatorios da sena
 #
 #  Created: 2022/02/15
-#  Altered: 2022/07/08
+#  Altered: 2022/07/09
 #
 #  Copyright (c) 2022-2022, Benedito Ramos <diramos@uol.com.br>
 #  Copyright (c) 2022-2022, Vilmar Catafesta <vcatafesta@gmail.com>
@@ -34,12 +34,21 @@ fileresult="$CPATH/resultadosena.txt"
 fileUltSorteio='/tmp/UltSorteio.txt'
 fileUltSorteioAtualizado='/tmp/UltSorteioAtualizado.txt'
 SITE='https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/'
-_VERSION_='1.55.20220708'
-DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat)
+_VERSION_='1.79.20220709'
+DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog)
 true=1
 false=0
 IFS=$' \t\n'
 SAVEIFS=$IFS
+sep='\xe2\x94\x82'
+
+# flag dialog exit status codes
+: ${D_OK=0}
+: ${D_CANCEL=1}
+: ${D_HELP=2}
+: ${D_EXTRA=3}
+: ${D_ITEM_HELP=4}
+: ${D_ESC=255}
 
 [ -e /chili/core.sh ] && source /chili/core.sh
 
@@ -77,12 +86,14 @@ sh_playsena()
 	declare -i outrametade=$metadeqtddezenas
 	declare -i n=0
 	declare -i njogosregistrados=0
+	local filelog=$(date +"%d%m%Y-%T" | sed 's/://g').log
 
    if (( $LCONF )); then
 		>| $filejogos
 	else
 		njogosregistrados=$(sh_linecount $filejogosformatado)
 	fi
+	>| $filelog
 
  	if [[ resto -gt 0 ]] ; then
 		((metadeqtddezenas++))
@@ -112,16 +123,16 @@ sh_playsena()
 		echo $line >> $filejogos
 		[[ $njogosregistrados -lt 10 ]] && var="Jogo "0"$njogosregistrados: " || var="Jogo $njogosregistrados: "
 		echo "$(date +"%d/%m/%Y %T") $var $line" >> $filejogosformatado
+		echo "$(date +"%d/%m/%Y %T") $var $line" >> $filelog
 	done
+	echo $(replicate '#' 80) >> $filejogosformatado
 	filetmp=$(mktemp)
 	sort $filejogos > $filetmp; cp $filetmp $filejogos; rm $filetmp 2> /dev/null
-	#chown www-data $filejogos
-	#chgrp www-data $filejogos
 }
 
 sh_linecount()
 {
-   awk 'END {print NR}' $1
+	awk 'END {print NR}' $1
 }
 
 die()
@@ -401,6 +412,66 @@ sh_listarjogos()
 	more $filejogosformatado
 }
 
+replicate()
+{
+   local Var
+   printf -v Var %$2s " "  #  Coloca em $Var $1 espaços
+   echo ${Var// /$1}       #  Troca os espaços pelo caractere escolhido
+}
+
+choosefile()
+{
+   while true
+   do
+   	pushd $CPATH &>/dev/null
+      ARRAY_FILE_LOG=($(find *.log -type f 2>/dev/null))
+      popd &>/dev/null
+     	[[ "${#ARRAY_FILE_LOG[@]}" -eq 0 ]] && die "erro: arquivo log de jogos ainda não existe. Faça alguns jogos primeiro. (use -h for help)"
+      local array=()
+      local i
+      local n=0
+      local nc=0
+
+      for i in "${ARRAY_FILE_LOG[@]}"
+      do
+      	array[((n++))]="$i"
+         array[((n++))]=$(printf "%-6s$sep%5s PALPITES" "$(date -r $i +"%d/%m/%Y %T")" "$(sh_linecount $i)")
+         ((nc++))
+      done
+
+      sd=$(dialog                                                                \
+               --title        "${cmsg_disco_origem[$LC_DEFAULT]}"                \
+               --backtitle 	"${0##*/} v${_VERSION_}"									\
+               --ok-label     "Visualizar"						                     \
+               --cancel-label "Sair"   									               \
+               --colors                                                          \
+               --extra-button                                                    \
+               --extra-label  "Excluir"								                  \
+               --menu         "\nArquivos Log de jogos"  			               \
+               0 0 0 "${array[@]}" 2>&1 >/dev/tty  )
+
+      exit_status=$?
+      case $exit_status in
+			$D_OK)
+		      if test ! -z "$sd"; then
+      		   display_result $sd
+      		fi
+      		;;
+         $D_ESC|$D_CANCEL)
+            exit
+            ;;
+         3)
+				conf "${red}:: ${reset}Deseja excluir o arquivo $sd ?"
+   			LCONF=$?
+	   		if (( $LCONF )); then
+            	rm -f $CPATH/$sd
+            	continue
+            fi
+            ;;
+      esac
+	done
+}
+
 sh_usage()
 {
 	cat <<EOF
@@ -418,6 +489,17 @@ ${orange}uso:${reset}
 EOF
 }
 
+display_result()
+{
+	dialog      --title  "$1" 									\
+               --no-collapse              				\
+               --no-cr-wrap               				\
+               --beep                     				\
+               --backtitle "${0##*/} v${_VERSION_}"	\
+               --textbox   "$1"           				\
+               0 0
+}
+
 init()
 {
    while test $# -gt 0
@@ -425,7 +507,8 @@ init()
       case "${1}" in
 		   -h|--help) sh_usage; exit $(( $# ? 0 : 1 ));;
    		-c|--compare) sh_compare; exit $(( $# ? 0 : 1 ));;
-   		-l|--log) sh_listarjogos; exit $(( $# ? 0 : 1 ));;
+#   		-l|--log) sh_listarjogos; exit $(( $# ? 0 : 1 ));;
+   		-l|--log) choosefile; exit $(( $# ? 0 : 1 ));;
    		-U|--update) sh_resultadosena; exit $(( $# ? 0 : 1 ));;
    		-V|--version) sh_logo; exit $(( $# ? 0 : 1 ));;
    		-j|--jogo)
