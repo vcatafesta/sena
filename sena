@@ -34,8 +34,8 @@ fileresult="$CPATH/resultadosena.txt"
 fileUltSorteio='/tmp/UltSorteio.txt'
 fileUltSorteioAtualizado='/tmp/UltSorteioAtualizado.txt'
 SITE='https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/'
-_VERSION_='1.79.20220709'
-DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog)
+_VERSION_='1.81.20220709'
+DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find)
 true=1
 false=0
 IFS=$' \t\n'
@@ -80,7 +80,7 @@ sh_playsena()
    fi
 
 	[[ ! -e $fileresult ]] && >| $fileresult
-	bytes=$(filesize $fileresult); [[ $bytes -eq 0 ]] && die "erro: necessário atualizar o BD. (use -h for help)" || sh_resultadosena
+	bytes=$(filesize $fileresult); [[ $bytes -eq 0 ]] && die "erro: necessário atualizar o BD. (use -h for help)" || sh_update
 	declare -i resto=$(( qtddezenas % 2 ))
 	declare -i metadeqtddezenas=$(( qtddezenas / 2 ))
 	declare -i outrametade=$metadeqtddezenas
@@ -137,16 +137,16 @@ sh_linecount()
 
 die()
 {
-   local msg=$1; shift
-   printf "${red}$msg${reset}\n" >&2
-   exit 1
+	local msg=$1; shift
+	printf "${red}$msg${reset}\n" >&2
+	exit 1
 }
 
 msg()
 {
-   local msg=$1; shift
-   printf "${green}$msg${reset}\n" >&2
-   return
+	local msg=$1; shift
+	printf "${green}$msg${reset}\n" >&2
+	return
 }
 
 erro()
@@ -162,11 +162,10 @@ sh_checknet()
    msg "${green}Testing internet from ${SITE}"
  	curl --insecure $SITE >/dev/null 2>&1 ||
    {
-      retorno=$?
-	   msg "No route to server ($SITE) - Rodando com BD velho mesmo"
+	   msg "No route to server ($SITE) - Rodando com BD sem atualizar."
+	   return 1
    }
-   retorno=$?
-	return $retorno
+   return $?
 }
 
 setvarcolors(){
@@ -209,18 +208,18 @@ setvarcolors(){
 
 check_deps()
 {
-   local errorFound=0
-   declare -a missing
+	local errorFound=0
+	declare -a missing
 
-   for d in "${DEPENDENCIES[@]}"; do
-      [[ -z $(command -v $d) ]] && missing+=($d) && errorFound=1 && printf "${red}ERRO${reset}: não encontrei o comando ${orange}'$d'${reset}\n"
-   done
-   #[[ ${#missing[@]} -ne 0 ]]
-   if (( $errorFound )); then
-   	erro "#### IMPOSSÍVEL CONTINUAR ####"
-    	msg "Esse script precisa dos comandos listados acima" >&2
-    	msg "Instale-os e/ou verifique se estão no seu \$PATH" >&2
-    	exit 1
+	for d in "${DEPENDENCIES[@]}"; do
+		[[ -z $(command -v $d) ]] && missing+=($d) && errorFound=1 && printf "${red}ERRO${reset}: não encontrei o comando ${orange}'$d'${reset}\n"
+	done
+	#[[ ${#missing[@]} -ne 0 ]]
+	if (( $errorFound )); then
+		erro "#### IMPOSSÍVEL CONTINUAR ####"
+		msg "Esse script precisa dos comandos listados acima" >&2
+		msg "Instale-os e/ou verifique se estão no seu \$PATH" >&2
+		exit 1
 	fi
 }
 
@@ -232,11 +231,11 @@ filesize()
 
 conf()
 {
-   read -p "$1 [S/n]"
-   [[ ${REPLY^} == "" ]] && return $true
-   [[ ${REPLY^} == "S" ]] && return $true
-   [[ ${REPLY^} == N ]] && return $false
-   die "erro: resposta deve ser S ou N"
+	read -p "$1 [S/n]"
+	[[ ${REPLY^} == "" ]] && return $true
+	[[ ${REPLY^} == "S" ]] && return $true
+	[[ ${REPLY^} == N ]] && return $false
+	die "erro: resposta deve ser S ou N"
 }
 
 sh_compare()
@@ -347,13 +346,13 @@ sh_checkresultadosfaltantes()
 	done
 }
 
-sh_resultadosena()
+sh_update()
 {
 	#### REMOVENDO ARQUIVOS TEMPORARIOS
 	rm $fileUltSorteio 2> /dev/null
 	rm $fileUltSorteioAtualizado 2> /dev/null
 
-	sh_checknet; [[ $? = 0 ]] || return 1
+	sh_checknet; [[ $? -eq 0 ]] || return 1
 	[[ ! -e $fileresult ]] && >| $fileresult
 
 	#### COLETANDO DADOS DO ULTIMO RESULTADO DA MEGASENA PULICADO PELA API DA CAIXA
@@ -440,6 +439,7 @@ choosefile()
       done
 
       sd=$(dialog                                                                \
+               --clear															               \
                --title        "${cmsg_disco_origem[$LC_DEFAULT]}"                \
                --backtitle 	"${0##*/} v${_VERSION_}"									\
                --ok-label     "Visualizar"						                     \
@@ -458,6 +458,7 @@ choosefile()
       		fi
       		;;
          $D_ESC|$D_CANCEL)
+         	clear
             exit
             ;;
          3)
@@ -494,7 +495,6 @@ display_result()
 	dialog      --title  "$1" 									\
                --no-collapse              				\
                --no-cr-wrap               				\
-               --beep                     				\
                --backtitle "${0##*/} v${_VERSION_}"	\
                --textbox   "$1"           				\
                0 0
@@ -507,9 +507,8 @@ init()
       case "${1}" in
 		   -h|--help) sh_usage; exit $(( $# ? 0 : 1 ));;
    		-c|--compare) sh_compare; exit $(( $# ? 0 : 1 ));;
-#   		-l|--log) sh_listarjogos; exit $(( $# ? 0 : 1 ));;
    		-l|--log) choosefile; exit $(( $# ? 0 : 1 ));;
-   		-U|--update) sh_resultadosena; exit $(( $# ? 0 : 1 ));;
+   		-U|--update) sh_update; exit $(( $# ? 0 : 1 ));;
    		-V|--version) sh_logo; exit $(( $# ? 0 : 1 ));;
    		-j|--jogo)
 				shift;
