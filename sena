@@ -497,15 +497,15 @@ sh_usage()
 	cat <<EOF
 ${white}sena v$_VERSION_${reset}
 ${orange}uso:${reset}
-   sena ${pink}-j 3${cyan}                # jogar 03 jogos (padrão 6 dezenas)${reset}
-   sena ${pink}-j 10${cyan}               # jogar 10 jogos (padrão 6 dezenas)${reset}
-   sena ${pink}-j 10 6${cyan}             # jogar 10 jogos com 06 (min) dezenas${reset}
-   sena ${pink}-j 5 15${cyan}             # jogar 05 jogos com 15 (max) dezenas${reset}
+   sena ${pink}-j 3${cyan}                # jogar 03 palpites (padrão 6 dezenas)${reset}
+   sena ${pink}-j 10${cyan}               # jogar 10 palpites (padrão 6 dezenas)${reset}
+   sena ${pink}-j 10 6${cyan}             # jogar 10 palpites com 06 (min) dezenas${reset}
+   sena ${pink}-j 5 15${cyan}             # jogar 05 palpites com 15 (max) dezenas${reset}
    sena ${pink}-h|--help${cyan}           # este help${reset}
-   sena ${pink}-c|--compare${cyan}        # comparar jogos${reset}
-   sena ${pink}-l|--log${cyan}            # list log de jogos${reset}
-   sena ${pink}-U|--update${cyan}         # atualizar BD${reset}
-   sena ${pink}-V|--version${cyan}        # mostra versão atual${reset}
+   sena ${pink}-c|--compare${cyan}        # comparar palpites com o BD${reset}
+   sena ${pink}-l|--log${cyan}            # exibir log de palpites efetuados${reset}
+   sena ${pink}-U|--update${cyan}         # atualizar BD com a CAIXA${reset}
+   sena ${pink}-V|--version${cyan}        # exibe versão do aplicativo${reset}
 EOF
 }
 
