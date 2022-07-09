@@ -27,6 +27,12 @@
 #     gettext, gpg, grep, gzip, sed, tput (ncurses), xz, etc
 #########################################################################
 #global
+
+#system
+_VERSION_='1.92.20220709'
+DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find)
+
+#paths/files/urls
 CPATH=$PWD
 filejogos="$CPATH/jogos.txt"
 filejogosformatado="$CPATH/jogosformatado.txt"
@@ -34,13 +40,15 @@ fileresult="$CPATH/resultadosena.txt"
 fileUltSorteio='/tmp/UltSorteio.txt'
 fileUltSorteioAtualizado='/tmp/UltSorteioAtualizado.txt'
 SITE='https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/'
-_VERSION_='1.81.20220709'
-DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find)
-true=1
-false=0
+
+#conf adicionais
 IFS=$' \t\n'
 SAVEIFS=$IFS
 sep='\xe2\x94\x82'
+
+# flag boolean
+true=1
+false=0
 
 # flag dialog exit status codes
 : ${D_OK=0}
@@ -65,8 +73,7 @@ sh_playsena()
 
   	LCONF=1
 	if [[ -e $filejogos ]]; then
-#		cfiledatahora=$(stat -c %w $filejogos)
-		cfiledatahora=$(date -r $filejogos +"%d/%m/%Y %T")
+		cfiledatahora=$(sh_filedatetime $filejogos)
 		njogos=$(sh_linecount $filejogos)
 		conf "${red}:: ${reset}Existe arquivo de jogos gerado em: ${yellow}$cfiledatahora${reset} com ${red}$njogos${reset} palpites. Deseja substitui-lo?"
    	LCONF=$?
@@ -122,13 +129,22 @@ sh_playsena()
 		printf "Jogo ${red}#%04d${reset} ${orange}%02d${reset} dezenas geradas: $pink%s${green}-> foi aceito${reset}\n" "$n" $qtddezenas "$line"
 		echo $line >> $filejogos
 		[[ $njogosregistrados -lt 10 ]] && var="Jogo "0"$njogosregistrados: " || var="Jogo $njogosregistrados: "
-		echo "$(date +"%d/%m/%Y %T") $var $line" >> $filejogosformatado
-		echo "$(date +"%d/%m/%Y %T") $var $line" >> $filelog
+		local cnow=$(sh_datetime)
+		echo "$cnow $var $line" >> $filejogosformatado
+		echo "$cnow $var $line" >> $filelog
 	done
 	echo $(replicate '#' 80) >> $filejogosformatado
 	filetmp=$(mktemp)
 	sort $filejogos > $filetmp; cp $filetmp $filejogos; rm $filetmp 2> /dev/null
 }
+
+sh_filedatetimestat(){ local cfiledatetime=$(stat -c %w $1); echo $cfiledatetime; }
+sh_filedatetime(){ local cfiledatetime=$(date -r $1 +"%d/%m/%Y %T"); echo $cfiledatetime; }
+sh_filedate(){ local cfiledate=$(date -r $1 +"%d/%m/%Y"); echo $cfiledate; }
+sh_filetime(){ local cfiletime=$(date -r $1 +"%T"); echo $cfiletime; }
+sh_datetime(){ local cdatetime=$(date +"%d/%m/%Y %T"); echo $cdatetime; }
+sh_time(){ local ctime=$(date +"%T"); echo $ctime; }
+sh_date(){ local cdate=$(date +"%d/%m/%Y"); echo $cdate; }
 
 sh_linecount()
 {
@@ -138,7 +154,7 @@ sh_linecount()
 die()
 {
 	local msg=$1; shift
-	printf "${red}$msg${reset}\n" >&2
+	printf "${pink}$msg${reset}\n" >&2
 	exit 1
 }
 
@@ -170,6 +186,7 @@ sh_checknet()
 
 setvarcolors(){
    if tput setaf 1 &> /dev/null; then
+		#tput setaf 127 | cat -v  #capturar saida
       tput sgr0; # reset colors
       bold=$(tput bold);
       reset=$(tput sgr0);
@@ -380,18 +397,20 @@ sh_update()
 
 sh_version()
 {
-   printf "${orange}${0##*/} v${_VERSION_}\n"
+   printf "${bold}${cyan}${0##*/} v${_VERSION_}${reset}"
 }
 
 sh_logo()
 {
-   cat << 'EOF'
+	sh_version
+	printf "$bold$yellow\n"
+	cat << 'LOGO'
    ________  ____  ____ _
   / ___/ _ \/ __ \/ __ `/
  (__  )  __/ / / / /_/ /
 /____/\___/_/ /_/\__,_/
-EOF
-	sh_version
+LOGO
+	printf $reset
 }
 
 sh_val()
