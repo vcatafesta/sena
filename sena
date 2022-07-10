@@ -355,15 +355,15 @@ sh_atualizaBD()
 	listaDezenas=$(sed -n '/listaDezenas/,/],/p' "$fileUltSorteioAtualizado" | sed 's/[^0-9]//g' | sed -e "s/\r//g" | awk -F"-" '{print $1}')
 	listaDezenas=$(echo "$listaDezenas" | cut -c1-18)
 	dataApuracao=$(grep '"dataApuracao":' "$fileUltSorteioAtualizado" | awk '{print $2}' | sed 's/\"//g' | sed 's/\,//g' | sed -e "s/\r//g" )
-	#valorEstimadoProximoConcurso=$(grep '"valorEstimadoProximoConcurso":' "$fileUltSorteioAtualizado" | awk -F"-" '{print $2}' | sed 's/\,//g')
+	valorEstimadoProximoConcurso=$(grep '"valorEstimadoProximoConcurso":' "$fileUltSorteioAtualizado" | awk -F"-" '{print $2}' | sed 's/\,//g')
 	dadosSena=$(sed -n '/"faixa": 1/,/},/p' "$fileUltSorteioAtualizado")
-	#dadosQuina=$(sed -n '/"faixa": 2/,/},/p' "$fileUltSorteioAtualizado")
-	#dadosQuadra=$(sed -n '/"faixa": 3/,/},/p' "$fileUltSorteioAtualizado")
+	dadosQuina=$(sed -n '/"faixa": 2/,/},/p' "$fileUltSorteioAtualizado")
+	dadosQuadra=$(sed -n '/"faixa": 3/,/},/p' "$fileUltSorteioAtualizado")
 	numGanhadoresSena=$(echo "$dadosSena" | awk -F'"' '{ print $5 }' | sed 's/://g' | sed 's/,//g')
 	valorPremioSena=$(echo "$dadosSena" | awk -F'"' '{print $7}' | sed 's/://g' | sed 's/,//g')
 	valorPremioSena=$(awk '{printf "%.2f\n" ,$1}' <<< "$valorPremioSena")
 	valorPremioSenaFormat=$(echo "$valorPremioSena" | sed -e :a -e 's/\(.*[0-9]\)\([0-9]\{3\}\)/\1,\2/;ta' | tr ',.' '.,')
-  	varLinhaInteira="$contLinha - $dataApuracao - $listaDezenas - $valorPremioSenaFormat - $numGanhadoresSena"
+	varLinhaInteira=$(echo $contLinha - $dataApuracao - $listaDezenas - $valorPremioSenaFormat - $numGanhadoresSena)
   	echo "$varLinhaInteira" |& tee -a "$fileresult"
 }
 
