@@ -355,7 +355,8 @@ sh_compareGREP()
 sh_atualizaBDjq()
 {
 	contLinha=$1
-   wget $SITE$contLinha --no-check-certificate -qO- > $fileUltSorteioAtualizado
+   #wget $SITE$contLinha --no-check-certificate -qO- > $fileUltSorteioAtualizado 						# mais lento
+   curl --compressed --insecure -s --url "$SITE$contLinha" --output $fileUltSorteioAtualizado		# mais rápido
 	listaDezenas=$(jq -r '.listaDezenas[range(0;6)]' $fileUltSorteioAtualizado)
    dataApuracao=$(jq -r '.dataApuracao' $fileUltSorteioAtualizado)
    valorEstimadoProximoConcurso=$(jq -r '.valorEstimadoProximoConcurso' $fileUltSorteioAtualizado)
@@ -372,7 +373,8 @@ sh_atualizaBDjq()
 sh_atualizaBD()
 {
 	contLinha=$1
-   wget $SITE$contLinha --no-check-certificate -qO- > $fileUltSorteioAtualizado
+   #wget $SITE$contLinha --no-check-certificate -qO- > $fileUltSorteioAtualizado 						# mais lento
+   curl --compressed --insecure -s --url "$SITE$contLinha" --output $fileUltSorteioAtualizado		# mais rápido
 	listaDezenas=$(sed -n '/listaDezenas/,/],/p' $fileUltSorteioAtualizado | sed 's/[^0-9]//g' | sed -e "s/\r//g" | awk -F"-" '{print $1}')
    listaDezenas=$(echo $listaDezenas | cut -c1-18)
    dataApuracao=$(grep '"dataApuracao":' $fileUltSorteioAtualizado | awk '{print $2}' | sed 's/\"//g' | sed 's/\,//g' | sed -e "s/\r//g" )
