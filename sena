@@ -29,7 +29,7 @@
 #global
 
 #system
-_VERSION_='1.92.20220709'
+_VERSION_='1.98.20220709'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find)
 
 #paths/files/urls
@@ -63,11 +63,11 @@ false=0
 sh_playsena()
 {
 	declare -i qtdjogos=$1
-   [[ $# -gt 2 ]] && die "erro: parâmetros em excesso. (use -h for help)"
+   [[ $# -gt 2 ]] && die "ERRO: parâmetros em excesso. (use -h for help)"
    [[ $# -eq 2 ]] && declare -i qtddezenas=$2 || declare -i qtddezenas=6
- 	[[ qtdjogos   -lt 1  ]] && die "erro: mínimo de 1 jogo brother! (use -h for help)"
- 	[[ qtddezenas -gt 15 ]] && die "erro: máximo de dezenas jogadas é: 15. (use -h for help)"
- 	[[ qtddezenas -lt  6 ]] && die "erro: mínimo de dezenas jogadas é: 6. (use -h for help)"
+ 	[[ qtdjogos   -lt 1  ]] && die "ERRO: mínimo de 1 jogo brother! (use -h for help)"
+ 	[[ qtddezenas -gt 15 ]] && die "ERRO: máximo de dezenas jogadas é: 15. (use -h for help)"
+ 	[[ qtddezenas -lt  6 ]] && die "ERRO: mínimo de dezenas jogadas é: 6. (use -h for help)"
  	[[ qtddezenas -gt 15 ]] && qtddezenas=15
  	[[ qtddezenas -lt  6 ]] && qtddezenas=6
 
@@ -75,19 +75,19 @@ sh_playsena()
 	if [[ -e $filejogos ]]; then
 		cfiledatahora=$(sh_filedatetime $filejogos)
 		njogos=$(sh_linecount $filejogos)
-		conf "${red}:: ${reset}Existe arquivo de jogos gerado em: ${yellow}$cfiledatahora${reset} com ${red}$njogos${reset} palpites. Deseja substitui-lo?"
+		sh_conf "${red}:: ${reset}Existe arquivo de jogos gerado em: ${yellow}$cfiledatahora${reset} com ${bold}${red}($njogos)${reset} palpites. Deseja substitui-lo?"
    	LCONF=$?
 	   if !(( $LCONF )); then
-			msg "Detalhes do arquivo de jogos feito"
-			stat $filejogos
-			msg "Exibindo os ultimos jogos feitos"
-			cat $filejogos
+			msg "1 - Detalhes do arquivo de palpites"
+			echo -n $bold$cyan; stat $filejogos; echo -n $reset
+			msg "2 - Exibindo os ultimos palpites feito"
+			echo -n $yellow; cat $filejogos; echo -n $reset
 			exit
 	   fi
    fi
 
 	[[ ! -e $fileresult ]] && >| $fileresult
-	bytes=$(filesize $fileresult); [[ $bytes -eq 0 ]] && die "erro: necessário atualizar o BD. (use -h for help)" || sh_update
+	bytes=$(sh_filesize $fileresult); [[ $bytes -eq 0 ]] && die "ERRO: necessário atualizar o BD. (use -h for help)" || sh_update
 	declare -i resto=$(( qtddezenas % 2 ))
 	declare -i metadeqtddezenas=$(( qtddezenas / 2 ))
 	declare -i outrametade=$metadeqtddezenas
@@ -114,19 +114,19 @@ sh_playsena()
 
   	 	if [[ qtddezenas -eq 6 ]] ; then
 			if grep -q -o "$line" $fileresult; then  # jogo existe no BD? descarta!
-	  			printf "Jogo ${red}#%04d${reset} ${orange}%02d${reset} dezenas geradas: $pink%s${red}-> foi descartado, já existe no BD!${reset}\n" "$n" $qtddezenas "$line"
+	  			printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${red}-> foi descartado, já existe no BD!${reset}\n" "$n" $qtddezenas "$line"
 				continue
 			fi
 		fi
 
 		if grep -q -o "$line" $filejogos; then  # jogo existe? descarta!
-  			printf "Jogo ${red}#%04d${reset} ${orange}%02d${reset} dezenas geradas: $pink%s${red}-> foi descartado, já existe no jogo atual!${reset}\n" "$n" $qtddezenas "$line"
+  			printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${red}-> foi descartado, já existe no jogo atual!${reset}\n" "$n" $qtddezenas "$line"
 			continue
 		fi
 
 		((n++))
 		((njogosregistrados++))
-		printf "Jogo ${red}#%04d${reset} ${orange}%02d${reset} dezenas geradas: $pink%s${green}-> foi aceito${reset}\n" "$n" $qtddezenas "$line"
+		printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${green}-> foi aceito${reset}\n" "$n" $qtddezenas "$line"
 		echo $line >> $filejogos
 		[[ $njogosregistrados -lt 10 ]] && var="Jogo "0"$njogosregistrados: " || var="Jogo $njogosregistrados: "
 		local cnow=$(sh_datetime)
@@ -154,7 +154,7 @@ sh_linecount()
 die()
 {
 	local msg=$1; shift
-	printf "${pink}$msg${reset}\n" >&2
+	printf "${bold}${red}$msg${reset}\n" >&2
 	exit 1
 }
 
@@ -168,7 +168,7 @@ msg()
 erro()
 {
    local msg=$1; shift
-   printf "${red}$msg${reset}\n" >&2
+   printf "${bold}${yellow}$msg${reset}\n" >&2
    return
 }
 
@@ -195,7 +195,7 @@ setvarcolors(){
       black=$(tput setaf 0);
       red=$(tput setaf 1);
       green=$(tput setaf 2);
-      yellow=$(tput setaf 3);
+      yellow=$(tput bold)$(tput setaf 3);
       blue=$(tput setaf 4);
       pink=$(tput setaf 5);
       cyan=$(tput setaf 6);
@@ -228,9 +228,9 @@ check_deps()
 	local errorFound=0
 	declare -a missing
 
-	for d in "${DEPENDENCIES[@]}"; do
+	for d in "${DEPENDENCIES[@]}" ; {
 		[[ -z $(command -v $d) ]] && missing+=($d) && errorFound=1 && printf "${red}ERRO${reset}: não encontrei o comando ${orange}'$d'${reset}\n"
-	done
+	}
 	#[[ ${#missing[@]} -ne 0 ]]
 	if (( $errorFound )); then
 		erro "#### IMPOSSÍVEL CONTINUAR ####"
@@ -240,41 +240,40 @@ check_deps()
 	fi
 }
 
-filesize()
+sh_filesize()
 {
 	local bytes=$(stat -c %s $1)
 	echo $bytes
 }
 
-conf()
+sh_conf()
 {
 	read -p "$1 [S/n]"
 	[[ ${REPLY^} == "" ]] && return $true
 	[[ ${REPLY^} == "S" ]] && return $true
 	[[ ${REPLY^} == N ]] && return $false
-	die "erro: resposta deve ser S ou N"
+	die "ERRO: resposta deve ser S ou N"
+}
+
+alltrim()
+{
+	echo "${1// /}"						# removendo todos os espacos da string
+}
+
+len()
+{
+	echo "${#1}"
 }
 
 sh_compare()
 {
-	[[ ! -e $filejogos ]] && { erro "erro: nenhum jogo realizado ainda para comparação. (use -h for help)"; exit 1;}
-	nsize=$(filesize $filejogos)
-	[[ $nsize -eq 0    ]] && { erro "erro: nenhum jogo realizado ainda para comparação. (use -h for help)"; exit 1;}
-
-:<<'comment'
-	while read -r i; do
-		if grep -q -o "$i" $fileresult; then
-			echo "$i - ${red}FALHA ↓ Já existe no BD"${reset}
-		else
-			echo "$i - ${green}OK ↑ não encontrado no BD"${reset}
-		fi
-	done < $filejogos
-comment
+	[[ ! -e $filejogos                 ]] && die "ERRO: nenhum jogo realizado para comparação. (use -h for help)"
+	[[ $(sh_filesize $filejogos) -eq 0 ]] && die "ERRO: nenhum jogo realizado para comparação. (use -h for help)"
 
 	IFS=$'\n'
 	local re='[0-9]{2}[ ]?'
-	local reR='([0-9]{2}[ ])+((?1))+'
-	local reJ='([0-9]{2}[ ])?((?1))+'
+	local reR='([0-9]{2}[[:space:]]+)((?1))+'
+	local reJ='([0-9]{2}[[:space:]]?)((?1))+'
 #	local aResult=($(awk -F'-' '{ print $3 }' $fileresult))
 #	local aJogos=($(awk '{print " "$0}' $filejogos))
 #	local aResult=($(awk -F "$reR" 'lista[$1]++' $fileresult))
@@ -284,35 +283,49 @@ comment
 	local n=1
 	local value
 
-:<<'comment'
+:<<'vilmar'
 	info "${aJogos[*]}"
 	echo
 	echo "${aJogos[0]}"
 	echo "${aJogos[1]}"
-comment
+vilmar
 
-	for value in ${aJogos[*]}
-	do
+	for value in ${aJogos[*]}; {
 	   #info "$value"
+	   local -i qtddezenas=$(($(len $(alltrim $value))/2))
 	   if [[ ! "${aResult[*]}" =~ "${value}" ]]; then
-	      printf "Jogo (${pink}$n${rs}) $value - ${green}OK ↑ não encontrado no BD${reset}\n"
+			printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${green} OK ↑ não encontrado no BD${reset}\n" "$n" $qtddezenas "$value"
 	   else
-	      printf "Jogo (${pink}$n${rs}) $value - ${red}FALHA ↓ Já existe no BD${reset}\n"
+			printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${red} FALHA ↓ foi encontrado no BD${reset}\n" "$n" $qtddezenas "$value"
 	   fi
 	   ((n++))
-	done
+	}
 	IFS=$SAVEIFS
+}
+
+sh_compareREAD()
+{
+	local i
+	[[ ! -e $filejogos                 ]] && die "ERRO: nenhum jogo realizado ainda para comparação. (use -h for help)"
+	[[ $(sh_filesize $filejogos) -eq 0 ]] && die "ERRO: nenhum jogo realizado ainda para comparação. (use -h for help)"
+
+	while read -r i; do
+		if grep -q -o "$i" $fileresult; then
+			echo "$i - ${red}FALHA ↓ Já existe no BD"${reset}
+		else
+			echo "$i - ${green}OK ↑ não encontrado no BD"${reset}
+		fi
+	done < $filejogos
 }
 
 sh_compareGREP()
 {
 	local re='[0-9]{2}[ ]?'
-	local reR='([0-9]{2}[ ])+((?1))+'
-	local reJ='([0-9]{2}[ ])?((?1))+'
+	local reR='([0-9]{2}[[:space:]]+)((?1))+'
+	local reJ='([0-9]{2}[[:space:]]?)((?1))+'
 
-	[[ ! -e $filejogos ]] && { erro "erro: nenhum jogo realizado ainda para comparação. (use -h for help)"; exit 1;}
-	nsize=$(filesize $filejogos)
-	[[ $nsize -eq 0    ]] && { erro "erro: nenhum jogo realizado ainda para comparação. (use -h for help)"; exit 1;}
+	[[ ! -e $filejogos                 ]] && die "ERRO: nenhum jogo realizado ainda para comparação. (use -h for help)"
+	[[ $(sh_filesize $filejogos) -eq 0 ]] && die "ERRO: nenhum jogo realizado ainda para comparação. (use -h for help)"
 
 	msg "Fazendo chegagem das jogadas. Aguarde..."
 	if ! value=$(grep -s -o -f $filejogos $fileresult); then
@@ -426,7 +439,7 @@ sh_val()
 
 sh_listarjogos()
 {
-	[[ ! -e $filejogosformatado ]] && die "erro: arquivo log de jogos ainda não existe. Faça alguns jogos primeiro. (use -h for help)"
+	[[ ! -e $filejogosformatado ]] && die "ERRO: arquivo log de jogos ainda não existe. Faça alguns jogos primeiro. (use -h for help)"
 	more $filejogosformatado
 }
 
@@ -444,7 +457,7 @@ choosefile()
    	pushd $CPATH &>/dev/null
       ARRAY_FILE_LOG=($(find *.log -type f 2>/dev/null))
       popd &>/dev/null
-     	[[ "${#ARRAY_FILE_LOG[@]}" -eq 0 ]] && die "erro: arquivo log de jogos ainda não existe. Faça alguns jogos primeiro. (use -h for help)"
+     	[[ "${#ARRAY_FILE_LOG[@]}" -eq 0 ]] && die "ERRO: arquivo log de jogos ainda não existe. Faça alguns jogos primeiro. (use -h for help)"
       local array=()
       local i
       local n=0
@@ -481,7 +494,7 @@ choosefile()
             exit
             ;;
          3)
-				conf "${red}:: ${reset}Deseja excluir o arquivo $sd ?"
+				sh_conf "${red}:: ${reset}Deseja excluir o arquivo $sd ?"
    			LCONF=$?
 	   		if (( $LCONF )); then
             	rm -f $CPATH/$sd
@@ -524,17 +537,17 @@ init()
    while test $# -gt 0
    do
       case "${1}" in
-		   -h|--help) sh_usage; exit $(( $# ? 0 : 1 ));;
-   		-c|--compare) sh_compare; exit $(( $# ? 0 : 1 ));;
-   		-l|--log) choosefile; exit $(( $# ? 0 : 1 ));;
+		   -h|-H|--help) sh_usage; exit $(( $# ? 0 : 1 ));;
+   		-c|-C|--compare) sh_compare; exit $(( $# ? 0 : 1 ));;
+   		-l|-L|--log) choosefile; exit $(( $# ? 0 : 1 ));;
    		-U|--update) sh_update; exit $(( $# ? 0 : 1 ));;
    		-V|--version) sh_logo; exit $(( $# ? 0 : 1 ));;
-   		-j|--jogo)
+   		-j|-J|--jogo)
 				shift;
-   			[[ $# -lt 1 ]] && die "erro: requer argumento/parâmetro. (use -h for help)";
-				ctype1=$(sh_val $1);	[[ $ctype1 != "N" ]] && die "erro: primeiro parâmetro deve ser numérico. (use -h for help)";
+   			[[ $# -lt 1 ]] && die "ERRO: requer argumento/parâmetro. (use -h for help)";
+				ctype1=$(sh_val $1);	[[ $ctype1 != "N" ]] && die "ERRO: primeiro parâmetro deve ser numérico. (use -h for help)";
    			if test $# -eq 2; then
-   				ctype2=$(sh_val $2);	[[ $ctype2 != "N" ]] && die "erro: segundo parâmetro deve ser numérico. (use -h for help)";
+   				ctype2=$(sh_val $2);	[[ $ctype2 != "N" ]] && die "ERRO: segundo parâmetro deve ser numérico. (use -h for help)";
 	  			fi
  				sh_playsena "$@"
  				exit $(( $# ? 0 : 1 ))
