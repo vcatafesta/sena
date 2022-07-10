@@ -29,7 +29,7 @@
 #global
 
 #system
-_VERSION_='2.1.20220710'
+_VERSION_='2.3.20220710'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find)
 
 #paths/files/urls
@@ -394,23 +394,25 @@ sh_checkresultadosfaltantes()
 	local -i n=0
 	local value
 	local array
+	local filetmp=$(mktemp)
 
 	msg "Checando a integridade do BD. Aguarde..."
-	local array=($(awk '{ print $1 }' "$fileresult"))
+	seq "$numUltSorteioGravado" > $filetmp
+	local array=$(awk 'NR == FNR {file1[$1]++; next} !($0 in file1)' $fileresult $filetmp)
+	rm -f $filetmp 2> /dev/null
 
-	for value in $(seq "$numUltSorteioGravado")
+	for value in $array
 	do
-   	if [[ ! " ${array[*]} " =~ " ${value} " ]]; then
-			if ! (( n )); then
-				msg "Atualizando Banco de Dados. Aguarde..."
-			fi
-			((n++))
-			if [[ -z $(command -v jq) ]]; then
-				sh_atualizaBD "$value"
-			else
-				sh_atualizaBDjq "$value"
-			fi
-	   fi
+		#info $value
+		if ! (( n )); then
+			msg "Atualizando Banco de Dados. Aguarde..."
+		fi
+		((n++))
+		if [[ -z $(command -v jq) ]]; then
+			sh_atualizaBD "$value"
+		else
+			sh_atualizaBDjq "$value"
+		fi
 	done
 }
 
@@ -441,7 +443,7 @@ sh_update()
 	sh_checkresultadosfaltantes "$numUltSorteio"
 	sort -g -u "$fileresult" > "$fileresult.sort"
 	cp "$fileresult.sort" "$fileresult"
-	rm -f "$fileresult.sort"
+	rm -f "$fileresult.sort" 2> /dev/null
 	msg "OK. Banco de Dados atualizado!"
 
 	#### REMOVENDO ARQUIVOS TEMPORARIOS
@@ -521,7 +523,7 @@ choosefile()
 				sh_conf "${red}:: ${reset}Deseja excluir o arquivo $sd ?"
    			LCONF=$?
 	   		if (( LCONF )); then
-            	rm -f "$CPATH/$sd"
+            	rm -f "$CPATH/$sd" 2> /dev/null
             	continue
             fi
             ;;
