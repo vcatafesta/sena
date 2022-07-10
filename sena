@@ -29,7 +29,7 @@
 #global
 
 #system
-_VERSION_='1.99.20220710'
+_VERSION_='2.0.20220710'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find)
 
 #paths/files/urls
@@ -153,10 +153,37 @@ sh_filetime(){ date -r "$1" +"%T"; }
 sh_datetime(){ date +"%d/%m/%Y %T"; }
 sh_time(){ date +"%T"; }
 sh_date(){ date +"%d/%m/%Y"; }
+sh_filesize(){	stat -c %s "$1"; }
+sh_linecount(){ awk 'END {print NR}' "$1"; }
+alltrim(){ echo "${1// /}"; } # remover todos espacos da string
+len(){ echo "${#1}"; }
 
-sh_linecount()
+sh_ascii-lines()
 {
-	awk 'END {print NR}' "$1"
+	if [[ "$LANG" =~ 'UTF-8' ]]
+	then
+  		export NCURSES_NO_UTF8_ACS=0
+	else
+  		export NCURSES_NO_UTF8_ACS=1
+	fi
+}
+
+sh_val()
+{
+	if [[ ${1} =~ ^([0-9]+)$ ]];then
+		echo "N"
+	elif [[ ${1} =~ ^([[:alpha:]]+)$ ]];then
+		echo "C"
+	else
+		echo "U"
+	fi
+}
+
+replicate()
+{
+   local Var
+   printf -v Var %"$2"s " "  #  Coloca em $Var $1 espaços
+   echo "${Var// /$1}"       #  Troca os espaços pelo caractere escolhido
 }
 
 die()
@@ -198,31 +225,31 @@ setvarcolors(){
       tput sgr0; # reset colors
       bold=$(tput bold);
       reset=$(tput sgr0);
-#     black=$(tput setaf 0);
+      black=$(tput setaf 0);
       red=$(tput setaf 1);
       green=$(tput setaf 2);
       yellow=$(tput bold)$(tput setaf 3);
-#     blue=$(tput setaf 4);
+      blue=$(tput setaf 4);
       pink=$(tput setaf 5);
       cyan=$(tput setaf 6);
       white=$(tput setaf 7);
       orange=$(tput setaf 3);
-#     purple=$(tput setaf 125);
-#     violet=$(tput setaf 61);
+      purple=$(tput setaf 125);
+      violet=$(tput setaf 61);
    else
       bold='';
       reset="\e[0m";
-#     blue="\e[1;34m";
+      blue="\e[1;34m";
       cyan="\e[1;36m";
       green="\e[1;32m";
       orange="\e[1;33m";
-#     purple="\e[1;35m";
+      purple="\e[1;35m";
       red="\e[1;31m";
-#     violet="\e[1;35m";
+      violet="\e[1;35m";
       white="\e[1;37m";
       yellow="\e[1;33m";
       pink="\033[35;1m";
-#     black="\e[1;30m";
+      black="\e[1;30m";
    fi
 }
 
@@ -243,13 +270,6 @@ check_deps()
 	fi
 }
 
-sh_filesize()
-{
-#	local bytes=$(stat -c %s "$1")
-#	echo "$bytes"
-	stat -c %s "$1"
-}
-
 sh_conf()
 {
 	read -r -p "$1 [S/n]"
@@ -257,16 +277,6 @@ sh_conf()
 	[[ ${REPLY^} == "S" ]] && return $true
 	[[ ${REPLY^} == N ]] && return $false
 	die "ERRO: resposta deve ser S ou N"
-}
-
-alltrim()
-{
-	echo "${1// /}"						# removendo todos os espacos da string
-}
-
-len()
-{
-	echo "${#1}"
 }
 
 sh_compare()
@@ -435,28 +445,10 @@ LOGO
 	printf '%s' "$reset"
 }
 
-sh_val()
-{
-	if [[ ${1} =~ ^([0-9]+)$ ]];then
-		echo "N"
-	elif [[ ${1} =~ ^([[:alpha:]]+)$ ]];then
-		echo "C"
-	else
-		echo "U"
-	fi
-}
-
 sh_listarjogos()
 {
 	[[ ! -e "$filejogosformatado" ]] && die "ERRO: arquivo log de jogos ainda não existe. Faça alguns jogos primeiro. (use -h for help)"
 	more "$filejogosformatado"
-}
-
-replicate()
-{
-   local Var
-   printf -v Var %"$2"s " "  #  Coloca em $Var $1 espaços
-   echo "${Var// /$1}"       #  Troca os espaços pelo caractere escolhido
 }
 
 choosefile()
@@ -479,6 +471,7 @@ choosefile()
          ((nc++))
       done
 
+#              --ascii-lines													               \
       sd=$(dialog                                                                \
                --clear															               \
                --title        "Arquivos de Log"							               \
@@ -531,10 +524,12 @@ ${orange}uso:${reset}
 EOF
 }
 
+#					--ascii-lines				               \
+
 display_result()
 {
 	dialog      --title  "$1" 									\
-               --no-collapse              				\
+            	--no-collapse              				\
                --no-cr-wrap               				\
                --backtitle "${0##*/} v${_VERSION_}"	\
                --textbox   "$1"           				\
@@ -569,5 +564,6 @@ init()
 
 setvarcolors
 check_deps
+sh_ascii-lines
 [[ -z $1 ]] && { sh_usage; exit $(( $# ? 0 : 1 ));}
 init "$@"
