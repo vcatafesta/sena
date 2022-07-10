@@ -119,17 +119,18 @@ sh_playsena()
 		cnow=$(sh_datetime)
 		((njogosregistrados++))
 		[[ njogosregistrados -lt 10 ]] && var="Jogo 0$njogosregistrados: " || var="Jogo $njogosregistrados: "
-		echo "$cnow $var $line" >> "$filelog"
 
   	 	if [[ qtddezenas -eq 6 ]] ; then
 			if grep -q -o "$line" "$fileresult"; then  # jogo existe no BD? descarta!
 	  			printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${red}-> foi descartado, já existe no BD!${reset}\n" "$n" "$qtddezenas" "$line"
+				echo "$cnow $var $line -> foi descartado, já existe no BD!" >> "$filelog"
 				continue
 			fi
 		fi
 
 		if grep -q -o "$line" "$filejogos"; then  # jogo existe? descarta!
   			printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${red}-> foi descartado, já existe no jogo atual!${reset}\n" "$n" "$qtddezenas" "$line"
+			echo "$cnow $var $line -> foi descartado, já existe no jogo atual!" >> "$filelog"
 			continue
 		fi
 
@@ -137,6 +138,7 @@ sh_playsena()
 		printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${green}-> foi aceito${reset}\n" "$n" "$qtddezenas" "$line"
 		echo "$line" >> "$filejogos"
 		echo "$cnow $var $line" >> "$filejogosformatado"
+		echo "$cnow $var $line -> foi aceito" >> "$filelog"
 	done
 	replicate '#' 80 >> "$filejogosformatado"
 	filetmp=$(mktemp)
