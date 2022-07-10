@@ -29,7 +29,7 @@
 #global
 
 #system
-_VERSION_='2.0.20220710'
+_VERSION_='2.1.20220710'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find)
 
 #paths/files/urls
@@ -94,6 +94,7 @@ sh_playsena()
 	[[ ! -e "$fileresult" ]] && :>| "$fileresult"
 	[[ $(sh_filesize "$fileresult") -eq 0 ]] && die "ERRO: necessário atualizar o BD. (use -h for help)"
 	sh_update
+
 	declare -i resto=$(( qtddezenas % 2 ))
 	declare -i metadeqtddezenas=$(( qtddezenas / 2 ))
 	declare -i outrametade="$metadeqtddezenas"
@@ -283,8 +284,8 @@ sh_compare()
 {
    local -i qtddezenas
 
-	[[ ! -e "$filejogos"                 ]] && die "ERRO: nenhum jogo realizado para comparação. (use -h for help)"
-	[[ $(sh_filesize "$filejogos") -eq 0 ]] && die "ERRO: nenhum jogo realizado para comparação. (use -h for help)"
+	[[ ! -e "$filejogos"                 ]] && die "ERRO: nenhum jogo realizado para comparar. (use -h for help)"
+	[[ $(sh_filesize "$filejogos") -eq 0 ]] && die "ERRO: nenhum jogo realizado para comparar. (use -h for help)"
 
 	IFS=$'\n'
 	#local re='[0-9]{2}[ ]?'
@@ -322,8 +323,8 @@ vilmar
 sh_compareREAD()
 {
 	local i
-	[[ ! -e "$filejogos"                 ]] && die "ERRO: nenhum jogo realizado ainda para comparação. (use -h for help)"
-	[[ $(sh_filesize "$filejogos") -eq 0 ]] && die "ERRO: nenhum jogo realizado ainda para comparação. (use -h for help)"
+	[[ ! -e "$filejogos"                 ]] && die "ERRO: nenhum jogo realizado ainda para comparar. (use -h for help)"
+	[[ $(sh_filesize "$filejogos") -eq 0 ]] && die "ERRO: nenhum jogo realizado ainda para comparar. (use -h for help)"
 
 	while read -r i; do
 		if grep -q -o "$i" "$fileresult"; then
@@ -340,8 +341,8 @@ sh_compareGREP()
 	local reR='([0-9]{2}[[:space:]]+)((?1))+'
 	local reJ='([0-9]{2}[[:space:]]?)((?1))+'
 
-	[[ ! -e "$filejogos"                 ]] && die "ERRO: nenhum jogo realizado ainda para comparação. (use -h for help)"
-	[[ $(sh_filesize "$filejogos") -eq 0 ]] && die "ERRO: nenhum jogo realizado ainda para comparação. (use -h for help)"
+	[[ ! -e "$filejogos"                 ]] && die "ERRO: nenhum jogo realizado ainda para comparar. (use -h for help)"
+	[[ $(sh_filesize "$filejogos") -eq 0 ]] && die "ERRO: nenhum jogo realizado ainda para comparar. (use -h for help)"
 
 	msg "Fazendo chegagem das jogadas. Aguarde..."
 	if ! value=$(grep -s -o -f "$filejogos" "$fileresult"); then
@@ -349,6 +350,23 @@ sh_compareGREP()
 	else
 		printf '%s\n' "Jogos ${cyan}\n$value\n${red}FALHA ↓ Já existe(m) no BD${reset}"
 	fi
+}
+
+sh_atualizaBDjq()
+{
+	contLinha=$1
+   wget $SITE$contLinha --no-check-certificate -qO- > $fileUltSorteioAtualizado
+	listaDezenas=$(jq -r '.listaDezenas[range(0;6)]' $fileUltSorteioAtualizado)
+   dataApuracao=$(jq -r '.dataApuracao' $fileUltSorteioAtualizado)
+   valorEstimadoProximoConcurso=$(jq -r '.valorEstimadoProximoConcurso' $fileUltSorteioAtualizado)
+   numGanhadoresSena=$(jq -r '.listaRateioPremio[0].numeroDeGanhadores' $fileUltSorteioAtualizado)
+   valorPremioSena=$(jq -r '.listaRateioPremio[0].valorPremio' $fileUltSorteioAtualizado|awk '{printf "%.2f\n" ,$1}'|sed -e :a -e 's/\(.*[0-9]\)\([0-9]\{3\}\)/\1,\2/;ta' | tr ',.' '.,')
+   numGanhadoresQuina=$(jq -r '.listaRateioPremio[1].numeroDeGanhadores' $fileUltSorteioAtualizado)
+   valorPremioQuina=$(jq -r '.listaRateioPremio[1].valorPremio' $fileUltSorteioAtualizado|awk '{printf "%.2f\n" ,$1}'|sed -e :a -e 's/\(.*[0-9]\)\([0-9]\{3\}\)/\1,\2/;ta' | tr ',.' '.,')
+   numGanhadoresQuadra=$(jq -r '.listaRateioPremio[2].numeroDeGanhadores' $fileUltSorteioAtualizado)
+   valorPremioQuadra=$(jq -r '.listaRateioPremio[2].valorPremio' $fileUltSorteioAtualizado|awk '{printf "%.2f\n" ,$1}'|sed -e :a -e 's/\(.*[0-9]\)\([0-9]\{3\}\)/\1,\2/;ta' | tr ',.' '.,')
+   varLinhaInteira=$(echo $contLinha - $dataApuracao - $listaDezenas - $valorPremioSena - $numGanhadoresSena - $valorPremioQuina - $numGanhadoresQuina - $valorPremioQuadra - $numGanhadoresQuadra)
+   tee -a $fileresult <<< "$varLinhaInteira"
 }
 
 sh_atualizaBD()
@@ -387,7 +405,11 @@ sh_checkresultadosfaltantes()
 				msg "Atualizando Banco de Dados. Aguarde..."
 			fi
 			((n++))
-			sh_atualizaBD "$value"
+			if [[ -z $(command -v jq) ]]; then
+				sh_atualizaBD "$value"
+			else
+				sh_atualizaBDjq "$value"
+			fi
 	   fi
 	done
 }
@@ -567,3 +589,8 @@ check_deps
 sh_ascii-lines
 [[ -z $1 ]] && { sh_usage; exit $(( $# ? 0 : 1 ));}
 init "$@"
+# '["]listaDezenas["]:\s*[[]\s+["]\K([0-9]{2})(["],?\s+["])((?1))+(?2)+((?1))+(?2)+((?1))+(?2)+((?1))+(?2)+((?1))'
+# wget https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/ --no-check-certificate -qO - | jq -r '.numero'
+# jq -r '.listaDezenas[1]' temp
+# grep -Po '"descricaoFaixa":.*?[^\\]",' temp
+# cat temp | python -c "import json,sys;obj=json.load(sys.stdin);print(obj['listaDezenas']);"
