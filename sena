@@ -29,7 +29,7 @@
 #global
 
 #system
-_VERSION_='2.5.20220710'
+_VERSION_='2.9.20220710'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find)
 
 #paths/files/urls
@@ -52,6 +52,7 @@ true=1
 false=0
 
 # flag dialog exit status codes
+: "${DIALOG=dialog}"
 : "${D_OK=0}"
 : "${D_CANCEL=1}"
 : "${D_HELP=2}"
@@ -497,7 +498,7 @@ choosefile()
       done
 
 #              --ascii-lines													               \
-      sd=$(dialog                                                                \
+      sd=$(${DIALOG}                                                             \
                --clear															               \
                --title        "Arquivos de Log"							               \
                --backtitle 	"${0##*/} v${_VERSION_}"									\
@@ -521,14 +522,21 @@ choosefile()
             exit
             ;;
          3)
-				sh_conf "${red}:: ${reset}Deseja excluir o arquivo $sd ?"
-   			LCONF=$?
-	   		if (( LCONF )); then
-            	rm -f "$CPATH/$sd" 2> /dev/null
-            	continue
-            fi
-            ;;
-      esac
+				${DIALOG} --yesno "Deseja excluir o arquivo $sd ?" 5 55
+		      exit_status=$?
+      		case $exit_status in
+					"$D_OK")
+				      if test -e "$sd"; then
+			           	rm -f "$CPATH/$sd" 2> /dev/null
+		            	continue
+      				fi
+      				;;
+         		"$D_ESC"|"$D_CANCEL")
+         			continue
+            		;;
+      		esac
+      		;;
+		esac
 	done
 }
 
@@ -553,7 +561,7 @@ EOF
 
 display_result()
 {
-	dialog      --title  "$1" 									\
+	${DIALOG}   --title  "$1" 									\
             	--no-collapse              				\
                --no-cr-wrap               				\
                --backtitle "${0##*/} v${_VERSION_}"	\
