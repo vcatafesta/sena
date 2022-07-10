@@ -116,6 +116,10 @@ sh_playsena()
 	  	jogos31a60=$(shuf -i 31-60 -n "$outrametade"      | tr -d ',e' | tr -s ' ' | sed 's/ / \n/g' | sort -n | while read -r a; do printf '%02d ' "$a" ; done)
 	  	#echo $jogos1a30 $jogos31a60 # 09 11 14 35 37 50
 	   line="$jogos1a30$jogos31a60"
+		cnow=$(sh_datetime)
+		((njogosregistrados++))
+		[[ njogosregistrados -lt 10 ]] && var="Jogo 0$njogosregistrados: " || var="Jogo $njogosregistrados: "
+		echo "$cnow $var $line" >> "$filelog"
 
   	 	if [[ qtddezenas -eq 6 ]] ; then
 			if grep -q -o "$line" "$fileresult"; then  # jogo existe no BD? descarta!
@@ -130,13 +134,9 @@ sh_playsena()
 		fi
 
 		((n++))
-		((njogosregistrados++))
 		printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${green}-> foi aceito${reset}\n" "$n" "$qtddezenas" "$line"
 		echo "$line" >> "$filejogos"
-		[[ njogosregistrados -lt 10 ]] && var="Jogo 0$njogosregistrados: " || var="Jogo $njogosregistrados: "
-		cnow=$(sh_datetime)
 		echo "$cnow $var $line" >> "$filejogosformatado"
-		echo "$cnow $var $line" >> "$filelog"
 	done
 	replicate '#' 80 >> "$filejogosformatado"
 	filetmp=$(mktemp)
