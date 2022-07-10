@@ -2,7 +2,7 @@
 #  sena - aplicativo para gerar numeros aleatorios da sena
 #
 #  Created: 2022/02/15
-#  Altered: 2022/07/09
+#  Altered: 2022/07/10
 #
 #  Copyright (c) 2022-2022, Benedito Ramos <diramos@uol.com.br>
 #  Copyright (c) 2022-2022, Vilmar Catafesta <vcatafesta@gmail.com>
@@ -29,7 +29,7 @@
 #global
 
 #system
-_VERSION_='1.98.20220709'
+_VERSION_='1.99.20220710'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find)
 
 #paths/files/urls
@@ -51,20 +51,24 @@ true=1
 false=0
 
 # flag dialog exit status codes
-: ${D_OK=0}
-: ${D_CANCEL=1}
-: ${D_HELP=2}
-: ${D_EXTRA=3}
-: ${D_ITEM_HELP=4}
-: ${D_ESC=255}
+: "${D_OK=0}"
+: "${D_CANCEL=1}"
+: "${D_HELP=2}"
+: "${D_EXTRA=3}"
+: "${D_ITEM_HELP=4}"
+: "${D_ESC=255}"
 
 [ -e /chili/core.sh ] && source /chili/core.sh
 
 sh_playsena()
 {
+	local filelog
+	local cnow
+   declare -i qtddezenas
 	declare -i qtdjogos=$1
+
    [[ $# -gt 2 ]] && die "ERRO: parâmetros em excesso. (use -h for help)"
-   [[ $# -eq 2 ]] && declare -i qtddezenas=$2 || declare -i qtddezenas=6
+   [[ $# -eq 2 ]] && qtddezenas=$2 || qtddezenas=6
  	[[ qtdjogos   -lt 1  ]] && die "ERRO: mínimo de 1 jogo brother! (use -h for help)"
  	[[ qtddezenas -gt 15 ]] && die "ERRO: máximo de dezenas jogadas é: 15. (use -h for help)"
  	[[ qtddezenas -lt  6 ]] && die "ERRO: mínimo de dezenas jogadas é: 6. (use -h for help)"
@@ -73,102 +77,111 @@ sh_playsena()
 
   	LCONF=1
 	if [[ -e $filejogos ]]; then
-		cfiledatahora=$(sh_filedatetime $filejogos)
-		njogos=$(sh_linecount $filejogos)
+		cfiledatahora=$(sh_filedatetime "$filejogos")
+		njogos=$(sh_linecount "$filejogos")
 		sh_conf "${red}:: ${reset}Existe arquivo de jogos gerado em: ${yellow}$cfiledatahora${reset} com ${bold}${red}($njogos)${reset} palpites. Deseja substitui-lo?"
    	LCONF=$?
-	   if !(( $LCONF )); then
+	   if ! (( LCONF )); then
 			msg "1 - Detalhes do arquivo de palpites"
-			echo -n $bold$cyan; stat $filejogos; echo -n $reset
+			echo -n "$bold$cyan"; stat "$filejogos"; echo -n "$reset"
 			msg "2 - Exibindo os ultimos palpites feito"
-			echo -n $yellow; cat $filejogos; echo -n $reset
+			echo -n "$yellow"; cat "$filejogos"; echo -n "$reset"
 			exit
 	   fi
    fi
 
-	[[ ! -e $fileresult ]] && >| $fileresult
-	bytes=$(sh_filesize $fileresult); [[ $bytes -eq 0 ]] && die "ERRO: necessário atualizar o BD. (use -h for help)" || sh_update
+	[[ ! -e "$fileresult" ]] && :>| "$fileresult"
+	[[ $(sh_filesize "$fileresult") -eq 0 ]] && die "ERRO: necessário atualizar o BD. (use -h for help)"
+	sh_update
 	declare -i resto=$(( qtddezenas % 2 ))
 	declare -i metadeqtddezenas=$(( qtddezenas / 2 ))
-	declare -i outrametade=$metadeqtddezenas
+	declare -i outrametade="$metadeqtddezenas"
 	declare -i n=0
 	declare -i njogosregistrados=0
-	local filelog=$(date +"%d%m%Y-%T" | sed 's/://g').log
+	filelog=$(date +"%d%m%Y-%T" | sed 's/://g').log
 
-   if (( $LCONF )); then
-		>| $filejogos
+   if (( LCONF )); then
+		:>| "$filejogos"
 	else
-		njogosregistrados=$(sh_linecount $filejogosformatado)
+		njogosregistrados=$(sh_linecount "$filejogosformatado")
 	fi
-	>| $filelog
+	:>| "$filelog"
 
  	if [[ resto -gt 0 ]] ; then
 		((metadeqtddezenas++))
 	fi
 
 	while [[ n -lt qtdjogos ]]; do
-	  	jogos1a30=$(shuf  -i  1-30 -n $metadeqtddezenas | tr -d ',e' | tr -s ' ' | sed 's/ / \n/g' | sort -n | while read a; do printf '%02d ' $a ; done)
-	  	jogos31a60=$(shuf -i 31-60 -n $outrametade      | tr -d ',e' | tr -s ' ' | sed 's/ / \n/g' | sort -n | while read a; do printf '%02d ' $a ; done)
+	  	jogos1a30=$(shuf  -i  1-30 -n "$metadeqtddezenas" | tr -d ',e' | tr -s ' ' | sed 's/ / \n/g' | sort -n | while read -r a; do printf '%02d ' "$a" ; done)
+	  	jogos31a60=$(shuf -i 31-60 -n "$outrametade"      | tr -d ',e' | tr -s ' ' | sed 's/ / \n/g' | sort -n | while read -r a; do printf '%02d ' "$a" ; done)
 	  	#echo $jogos1a30 $jogos31a60 # 09 11 14 35 37 50
 	   line="$jogos1a30$jogos31a60"
 
   	 	if [[ qtddezenas -eq 6 ]] ; then
-			if grep -q -o "$line" $fileresult; then  # jogo existe no BD? descarta!
-	  			printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${red}-> foi descartado, já existe no BD!${reset}\n" "$n" $qtddezenas "$line"
+			if grep -q -o "$line" "$fileresult"; then  # jogo existe no BD? descarta!
+	  			printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${red}-> foi descartado, já existe no BD!${reset}\n" "$n" "$qtddezenas" "$line"
 				continue
 			fi
 		fi
 
-		if grep -q -o "$line" $filejogos; then  # jogo existe? descarta!
-  			printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${red}-> foi descartado, já existe no jogo atual!${reset}\n" "$n" $qtddezenas "$line"
+		if grep -q -o "$line" "$filejogos"; then  # jogo existe? descarta!
+  			printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${red}-> foi descartado, já existe no jogo atual!${reset}\n" "$n" "$qtddezenas" "$line"
 			continue
 		fi
 
 		((n++))
 		((njogosregistrados++))
-		printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${green}-> foi aceito${reset}\n" "$n" $qtddezenas "$line"
-		echo $line >> $filejogos
-		[[ $njogosregistrados -lt 10 ]] && var="Jogo "0"$njogosregistrados: " || var="Jogo $njogosregistrados: "
-		local cnow=$(sh_datetime)
-		echo "$cnow $var $line" >> $filejogosformatado
-		echo "$cnow $var $line" >> $filelog
+		printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${green}-> foi aceito${reset}\n" "$n" "$qtddezenas" "$line"
+		echo "$line" >> "$filejogos"
+		[[ njogosregistrados -lt 10 ]] && var="Jogo 0$njogosregistrados: " || var="Jogo $njogosregistrados: "
+		cnow=$(sh_datetime)
+		echo "$cnow $var $line" >> "$filejogosformatado"
+		echo "$cnow $var $line" >> "$filelog"
 	done
-	echo $(replicate '#' 80) >> $filejogosformatado
+	replicate '#' 80 >> "$filejogosformatado"
 	filetmp=$(mktemp)
-	sort $filejogos > $filetmp; cp $filetmp $filejogos; rm $filetmp 2> /dev/null
+	sort "$filejogos" > "$filetmp"; cp "$filetmp" "$filejogos"; rm "$filetmp" 2> /dev/null
 }
 
-sh_filedatetimestat(){ local cfiledatetime=$(stat -c %w $1); echo $cfiledatetime; }
-sh_filedatetime(){ local cfiledatetime=$(date -r $1 +"%d/%m/%Y %T"); echo $cfiledatetime; }
-sh_filedate(){ local cfiledate=$(date -r $1 +"%d/%m/%Y"); echo $cfiledate; }
-sh_filetime(){ local cfiletime=$(date -r $1 +"%T"); echo $cfiletime; }
-sh_datetime(){ local cdatetime=$(date +"%d/%m/%Y %T"); echo $cdatetime; }
-sh_time(){ local ctime=$(date +"%T"); echo $ctime; }
-sh_date(){ local cdate=$(date +"%d/%m/%Y"); echo $cdate; }
+#sh_filedatetimestat(){ local cfiledatetime=$(stat -c %w "$1"); echo "$cfiledatetime"; }
+#sh_filedatetime(){ local cfiledatetime=$(date -r "$1" +"%d/%m/%Y %T"); echo "$cfiledatetime"; }
+#sh_filedate(){ local cfiledate=$(date -r "$1" +"%d/%m/%Y"); echo "$cfiledate"; }
+#sh_filetime(){ local cfiletime=$(date -r "$1" +"%T"); echo "$cfiletime"; }
+#sh_datetime(){ local cdatetime=$(date +"%d/%m/%Y %T"); echo "$cdatetime"; }
+#sh_time(){ local ctime=$(date +"%T"); echo "$ctime"; }
+#sh_date(){ local cdate=$(date +"%d/%m/%Y"); echo "$cdate"; }
+
+sh_filedatetimestat(){ stat -c %w "$1"; }
+sh_filedatetime(){ date -r "$1" +"%d/%m/%Y %T";}
+sh_filedate(){ date -r "$1" +"%d/%m/%Y";}
+sh_filetime(){ date -r "$1" +"%T"; }
+sh_datetime(){ date +"%d/%m/%Y %T"; }
+sh_time(){ date +"%T"; }
+sh_date(){ date +"%d/%m/%Y"; }
 
 sh_linecount()
 {
-	awk 'END {print NR}' $1
+	awk 'END {print NR}' "$1"
 }
 
 die()
 {
 	local msg=$1; shift
-	printf "${bold}${red}$msg${reset}\n" >&2
+	printf '%s\n' "${bold}${red}$msg${reset}" >&2
 	exit 1
 }
 
 msg()
 {
 	local msg=$1; shift
-	printf "${green}$msg${reset}\n" >&2
+	printf '%s\n' "${green}$msg${reset}" >&2
 	return
 }
 
 erro()
 {
    local msg=$1; shift
-   printf "${bold}${yellow}$msg${reset}\n" >&2
+   printf '%s\n' "${bold}${yellow}$msg${reset}" >&2
    return
 }
 
@@ -190,36 +203,31 @@ setvarcolors(){
       tput sgr0; # reset colors
       bold=$(tput bold);
       reset=$(tput sgr0);
-      rst=$(tput sgr0);
-      rs=$(tput sgr0);
-      black=$(tput setaf 0);
+#     black=$(tput setaf 0);
       red=$(tput setaf 1);
       green=$(tput setaf 2);
       yellow=$(tput bold)$(tput setaf 3);
-      blue=$(tput setaf 4);
+#     blue=$(tput setaf 4);
       pink=$(tput setaf 5);
       cyan=$(tput setaf 6);
       white=$(tput setaf 7);
       orange=$(tput setaf 3);
-      purple=$(tput setaf 125);
-      violet=$(tput setaf 61);
+#     purple=$(tput setaf 125);
+#     violet=$(tput setaf 61);
    else
       bold='';
       reset="\e[0m";
-      rst="\e[0m";
-      rs="\e[0m";
-      reset="\e[0m";
-      blue="\e[1;34m";
+#     blue="\e[1;34m";
       cyan="\e[1;36m";
       green="\e[1;32m";
       orange="\e[1;33m";
-      purple="\e[1;35m";
+#     purple="\e[1;35m";
       red="\e[1;31m";
-      violet="\e[1;35m";
+#     violet="\e[1;35m";
       white="\e[1;37m";
       yellow="\e[1;33m";
       pink="\033[35;1m";
-      black="\e[1;30m";
+#     black="\e[1;30m";
    fi
 }
 
@@ -229,10 +237,10 @@ check_deps()
 	declare -a missing
 
 	for d in "${DEPENDENCIES[@]}" ; {
-		[[ -z $(command -v $d) ]] && missing+=($d) && errorFound=1 && printf "${red}ERRO${reset}: não encontrei o comando ${orange}'$d'${reset}\n"
+		[[ -z $(command -v "$d") ]] && missing+=("$d") && errorFound=1 && printf '%s\n' "${red}ERRO${reset}: não encontrei o comando ${orange}'$d'${reset}"
 	}
 	#[[ ${#missing[@]} -ne 0 ]]
-	if (( $errorFound )); then
+	if (( errorFound )); then
 		erro "#### IMPOSSÍVEL CONTINUAR ####"
 		msg "Esse script precisa dos comandos listados acima" >&2
 		msg "Instale-os e/ou verifique se estão no seu \$PATH" >&2
@@ -242,13 +250,14 @@ check_deps()
 
 sh_filesize()
 {
-	local bytes=$(stat -c %s $1)
-	echo $bytes
+#	local bytes=$(stat -c %s "$1")
+#	echo "$bytes"
+	stat -c %s "$1"
 }
 
 sh_conf()
 {
-	read -p "$1 [S/n]"
+	read -r -p "$1 [S/n]"
 	[[ ${REPLY^} == "" ]] && return $true
 	[[ ${REPLY^} == "S" ]] && return $true
 	[[ ${REPLY^} == N ]] && return $false
@@ -267,19 +276,21 @@ len()
 
 sh_compare()
 {
-	[[ ! -e $filejogos                 ]] && die "ERRO: nenhum jogo realizado para comparação. (use -h for help)"
-	[[ $(sh_filesize $filejogos) -eq 0 ]] && die "ERRO: nenhum jogo realizado para comparação. (use -h for help)"
+   local -i qtddezenas
+
+	[[ ! -e "$filejogos"                 ]] && die "ERRO: nenhum jogo realizado para comparação. (use -h for help)"
+	[[ $(sh_filesize "$filejogos") -eq 0 ]] && die "ERRO: nenhum jogo realizado para comparação. (use -h for help)"
 
 	IFS=$'\n'
-	local re='[0-9]{2}[ ]?'
+	#local re='[0-9]{2}[ ]?'
 	local reR='([0-9]{2}[[:space:]]+)((?1))+'
 	local reJ='([0-9]{2}[[:space:]]?)((?1))+'
 #	local aResult=($(awk -F'-' '{ print $3 }' $fileresult))
 #	local aJogos=($(awk '{print " "$0}' $filejogos))
 #	local aResult=($(awk -F "$reR" 'lista[$1]++' $fileresult))
 #	local aJogos=($(awk -F "$reJ" 'lista[$1]++' $filejogos))
-	local aResult=($(grep -Po "$reR" $fileresult))
-	local aJogos=($(grep -Po "$reJ" $filejogos))
+	local aResult=($(grep -Po "$reR" "$fileresult"))
+	local aJogos=($(grep -Po "$reJ" "$filejogos"))
 	local n=1
 	local value
 
@@ -292,7 +303,7 @@ vilmar
 
 	for value in ${aJogos[*]}; {
 	   #info "$value"
-	   local -i qtddezenas=$(($(len $(alltrim $value))/2))
+	   qtddezenas=$(( "$(len "$(alltrim "$value")")" /2 ))
 	   if [[ ! "${aResult[*]}" =~ "${value}" ]]; then
 			printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${green} OK ↑ não encontrado no BD${reset}\n" "$n" $qtddezenas "$value"
 	   else
@@ -306,52 +317,52 @@ vilmar
 sh_compareREAD()
 {
 	local i
-	[[ ! -e $filejogos                 ]] && die "ERRO: nenhum jogo realizado ainda para comparação. (use -h for help)"
-	[[ $(sh_filesize $filejogos) -eq 0 ]] && die "ERRO: nenhum jogo realizado ainda para comparação. (use -h for help)"
+	[[ ! -e "$filejogos"                 ]] && die "ERRO: nenhum jogo realizado ainda para comparação. (use -h for help)"
+	[[ $(sh_filesize "$filejogos") -eq 0 ]] && die "ERRO: nenhum jogo realizado ainda para comparação. (use -h for help)"
 
 	while read -r i; do
-		if grep -q -o "$i" $fileresult; then
-			echo "$i - ${red}FALHA ↓ Já existe no BD"${reset}
+		if grep -q -o "$i" "$fileresult"; then
+			echo "$i - ${red}FALHA ↓ Já existe no BD${reset}"
 		else
-			echo "$i - ${green}OK ↑ não encontrado no BD"${reset}
+			echo "$i - ${green}OK ↑ não encontrado no BD${reset}"
 		fi
-	done < $filejogos
+	done < "$filejogos"
 }
 
 sh_compareGREP()
 {
-	local re='[0-9]{2}[ ]?'
+	#local re='[0-9]{2}[ ]?'
 	local reR='([0-9]{2}[[:space:]]+)((?1))+'
 	local reJ='([0-9]{2}[[:space:]]?)((?1))+'
 
-	[[ ! -e $filejogos                 ]] && die "ERRO: nenhum jogo realizado ainda para comparação. (use -h for help)"
-	[[ $(sh_filesize $filejogos) -eq 0 ]] && die "ERRO: nenhum jogo realizado ainda para comparação. (use -h for help)"
+	[[ ! -e "$filejogos"                 ]] && die "ERRO: nenhum jogo realizado ainda para comparação. (use -h for help)"
+	[[ $(sh_filesize "$filejogos") -eq 0 ]] && die "ERRO: nenhum jogo realizado ainda para comparação. (use -h for help)"
 
 	msg "Fazendo chegagem das jogadas. Aguarde..."
-	if ! value=$(grep -s -o -f $filejogos $fileresult); then
-		printf "${green}OK ↑ nenhuma jogada armazenada foi encontrada no BD${reset}\n"
+	if ! value=$(grep -s -o -f "$filejogos" "$fileresult"); then
+		printf '%s\n' "${green}OK ↑ nenhuma jogada armazenada foi encontrada no BD${reset}"
 	else
-		printf "Jogos ${cyan}\n$value\n${red}FALHA ↓ Já existe(m) no BD${reset}\n"
+		printf '%s\n' "Jogos ${cyan}\n$value\n${red}FALHA ↓ Já existe(m) no BD${reset}"
 	fi
 }
 
 sh_atualizaBD()
 {
 	contLinha=$1
-	wget $SITE$contLinha --no-check-certificate -qO- > $fileUltSorteioAtualizado
-	listaDezenas=$(sed -n '/listaDezenas/,/],/p' $fileUltSorteioAtualizado | sed 's/[^0-9]//g' | sed -e "s/\r//g" | awk -F"-" '{print $1}')
-	listaDezenas=$(echo $listaDezenas | cut -c1-18)
-	dataApuracao=$(grep '"dataApuracao":' $fileUltSorteioAtualizado | awk '{print $2}' | sed 's/\"//g' | sed 's/\,//g' | sed -e "s/\r//g" )
-	valorEstimadoProximoConcurso=$(grep '"valorEstimadoProximoConcurso":' $fileUltSorteioAtualizado | awk -F"-" '{print $2}' | sed 's/\,//g')
-	dadosSena=$(sed -n '/"faixa": 1/,/},/p' $fileUltSorteioAtualizado)
-	dadosQuina=$(sed -n '/"faixa": 2/,/},/p' $fileUltSorteioAtualizado)
-	dadosQuadra=$(sed -n '/"faixa": 3/,/},/p' $fileUltSorteioAtualizado)
-	numGanhadoresSena=$(echo $dadosSena | awk -F'"' '{ print $5 }' | sed 's/://g' | sed 's/,//g')
-	valorPremioSena=$(echo $dadosSena | awk -F'"' '{print $7}' | sed 's/://g' | sed 's/,//g')
+	wget "$SITE$contLinha" --no-check-certificate -qO- > "$fileUltSorteioAtualizado"
+	listaDezenas=$(sed -n '/listaDezenas/,/],/p' "$fileUltSorteioAtualizado" | sed 's/[^0-9]//g' | sed -e "s/\r//g" | awk -F"-" '{print $1}')
+	listaDezenas=$(echo "$listaDezenas" | cut -c1-18)
+	dataApuracao=$(grep '"dataApuracao":' "$fileUltSorteioAtualizado" | awk '{print $2}' | sed 's/\"//g' | sed 's/\,//g' | sed -e "s/\r//g" )
+	#valorEstimadoProximoConcurso=$(grep '"valorEstimadoProximoConcurso":' "$fileUltSorteioAtualizado" | awk -F"-" '{print $2}' | sed 's/\,//g')
+	dadosSena=$(sed -n '/"faixa": 1/,/},/p' "$fileUltSorteioAtualizado")
+	#dadosQuina=$(sed -n '/"faixa": 2/,/},/p' "$fileUltSorteioAtualizado")
+	#dadosQuadra=$(sed -n '/"faixa": 3/,/},/p' "$fileUltSorteioAtualizado")
+	numGanhadoresSena=$(echo "$dadosSena" | awk -F'"' '{ print $5 }' | sed 's/://g' | sed 's/,//g')
+	valorPremioSena=$(echo "$dadosSena" | awk -F'"' '{print $7}' | sed 's/://g' | sed 's/,//g')
 	valorPremioSena=$(awk '{printf "%.2f\n" ,$1}' <<< "$valorPremioSena")
-	valorPremioSenaFormat=$(echo $valorPremioSena  | sed -e :a -e 's/\(.*[0-9]\)\([0-9]\{3\}\)/\1,\2/;ta' | tr ',.' '.,')
-  	varLinhaInteira=$(echo $contLinha - $dataApuracao - $listaDezenas - $valorPremioSenaFormat - $numGanhadoresSena)
-  	echo $varLinhaInteira |& tee -a $fileresult
+	valorPremioSenaFormat=$(echo "$valorPremioSena" | sed -e :a -e 's/\(.*[0-9]\)\([0-9]\{3\}\)/\1,\2/;ta' | tr ',.' '.,')
+  	varLinhaInteira="$contLinha - $dataApuracao - $listaDezenas - $valorPremioSenaFormat - $numGanhadoresSena"
+  	echo "$varLinhaInteira" |& tee -a "$fileresult"
 }
 
 sh_checkresultadosfaltantes()
@@ -362,12 +373,12 @@ sh_checkresultadosfaltantes()
 	local array
 
 	msg "Checando a integridade do BD. Aguarde..."
-	local array=($(awk '{ print $1 }' $fileresult))
+	local array=($(awk '{ print $1 }' "$fileresult"))
 
-	for value in $(seq $numUltSorteioGravado)
+	for value in $(seq "$numUltSorteioGravado")
 	do
    	if [[ ! " ${array[*]} " =~ " ${value} " ]]; then
-			if !(( $n )); then
+			if ! (( n )); then
 				msg "Atualizando Banco de Dados. Aguarde..."
 			fi
 			((n++))
@@ -378,29 +389,32 @@ sh_checkresultadosfaltantes()
 
 sh_update()
 {
-	#### REMOVENDO ARQUIVOS TEMPORARIOS
-	rm $fileUltSorteio 2> /dev/null
-	rm $fileUltSorteioAtualizado 2> /dev/null
+	declare -i numUltSorteio
+	declare -i numUltSorteioGravado
 
-	sh_checknet; [[ $? -eq 0 ]] || return 1
-	[[ ! -e $fileresult ]] && >| $fileresult
+	#### REMOVENDO ARQUIVOS TEMPORARIOS
+	rm "$fileUltSorteio" 2> /dev/null
+	rm "$fileUltSorteioAtualizado" 2> /dev/null
+
+	sh_checknet || return 1
+	[[ ! -e "$fileresult" ]] && :>| "$fileresult"
 
 	#### COLETANDO DADOS DO ULTIMO RESULTADO DA MEGASENA PULICADO PELA API DA CAIXA
-	wget $SITE --no-check-certificate -qO- > $fileUltSorteio
-	declare -i numUltSorteio=$(awk '/["]numero["]:/ {print $2}' $fileUltSorteio | sed 's/\,//g' | sed '/^$/d' | sed -e "s/\r//g")
+	wget "$SITE" --no-check-certificate -qO- > "$fileUltSorteio"
+	numUltSorteio=$(awk '/["]numero["]:/ {print $2}' "$fileUltSorteio" | sed 's/\,//g' | sed '/^$/d' | sed -e "s/\r//g")
 
 	#### COLETANDO O NUMERO DO ULTIMO SORTEIO GRAVADO NO BD
-	declare -i numUltSorteioGravado=$(awk 'END {print NR}' $fileresult)
+	numUltSorteioGravado=$(awk 'END {print NR}' "$fileresult")
 
 	#### COLETANDO DADOS DOS DOS RESULTADOS NAO INCLUÍDOS NO BD
 	declare -i falta=$(( numUltSorteio - numUltSorteioGravado ))
-	printf "Sorteios feitos pela CAIXA : ${red}$numUltSorteio${reset}\n"
-	printf "Sorteios registrados no BD : ${orange}$numUltSorteioGravado${reset}\n"
+	printf "Sorteios feitos pela CAIXA : %s\n" "${red}$numUltSorteio${reset}"
+	printf "Sorteios registrados no BD : %s\n" "${orange}$numUltSorteioGravado${reset}"
 	msg "${falta} novo(s) registro(s) encontrado(s)!"
-	sh_checkresultadosfaltantes $numUltSorteio
-	sort -g -u $fileresult > $fileresult.sort
-	cp $fileresult.sort $fileresult
-	rm -f $fileresult.sort
+	sh_checkresultadosfaltantes "$numUltSorteio"
+	sort -g -u "$fileresult" > "$fileresult.sort"
+	cp "$fileresult.sort" "$fileresult"
+	rm -f "$fileresult.sort"
 	msg "OK. Banco de Dados atualizado!"
 
 	#### REMOVENDO ARQUIVOS TEMPORARIOS
@@ -410,20 +424,20 @@ sh_update()
 
 sh_version()
 {
-   printf "${bold}${cyan}${0##*/} v${_VERSION_}${reset}"
+   printf '%s' "${bold}${cyan}${0##*/} v${_VERSION_}${reset}"
 }
 
 sh_logo()
 {
 	sh_version
-	printf "$bold$yellow\n"
+	printf '%s\n' "$bold$yellow"
 	cat << 'LOGO'
    ________  ____  ____ _
   / ___/ _ \/ __ \/ __ `/
  (__  )  __/ / / / /_/ /
 /____/\___/_/ /_/\__,_/
 LOGO
-	printf $reset
+	printf '%s' "$reset"
 }
 
 sh_val()
@@ -439,24 +453,24 @@ sh_val()
 
 sh_listarjogos()
 {
-	[[ ! -e $filejogosformatado ]] && die "ERRO: arquivo log de jogos ainda não existe. Faça alguns jogos primeiro. (use -h for help)"
-	more $filejogosformatado
+	[[ ! -e "$filejogosformatado" ]] && die "ERRO: arquivo log de jogos ainda não existe. Faça alguns jogos primeiro. (use -h for help)"
+	more "$filejogosformatado"
 }
 
 replicate()
 {
    local Var
-   printf -v Var %$2s " "  #  Coloca em $Var $1 espaços
-   echo ${Var// /$1}       #  Troca os espaços pelo caractere escolhido
+   printf -v Var %"$2"s " "  #  Coloca em $Var $1 espaços
+   echo "${Var// /$1}"       #  Troca os espaços pelo caractere escolhido
 }
 
 choosefile()
 {
    while true
    do
-   	pushd $CPATH &>/dev/null
+   	pushd "$CPATH" &>/dev/null || exit
       ARRAY_FILE_LOG=($(find *.log -type f 2>/dev/null))
-      popd &>/dev/null
+      popd &>/dev/null || exit
      	[[ "${#ARRAY_FILE_LOG[@]}" -eq 0 ]] && die "ERRO: arquivo log de jogos ainda não existe. Faça alguns jogos primeiro. (use -h for help)"
       local array=()
       local i
@@ -466,13 +480,13 @@ choosefile()
       for i in "${ARRAY_FILE_LOG[@]}"
       do
       	array[((n++))]="$i"
-         array[((n++))]=$(printf "%-6s$sep%5s PALPITES" "$(date -r $i +"%d/%m/%Y %T")" "$(sh_linecount $i)")
+         array[((n++))]=$(printf "%-6s$sep%5s PALPITES" "$(date -r "$i" +"%d/%m/%Y %T")" "$(sh_linecount "$i")")
          ((nc++))
       done
 
       sd=$(dialog                                                                \
                --clear															               \
-               --title        "${cmsg_disco_origem[$LC_DEFAULT]}"                \
+               --title        "Arquivos de Log"							               \
                --backtitle 	"${0##*/} v${_VERSION_}"									\
                --ok-label     "Visualizar"						                     \
                --cancel-label "Sair"   									               \
@@ -484,20 +498,20 @@ choosefile()
 
       exit_status=$?
       case $exit_status in
-			$D_OK)
+			"$D_OK")
 		      if test ! -z "$sd"; then
-      		   display_result $sd
+      		   display_result "$sd"
       		fi
       		;;
-         $D_ESC|$D_CANCEL)
+         "$D_ESC"|"$D_CANCEL")
          	clear
             exit
             ;;
          3)
 				sh_conf "${red}:: ${reset}Deseja excluir o arquivo $sd ?"
    			LCONF=$?
-	   		if (( $LCONF )); then
-            	rm -f $CPATH/$sd
+	   		if (( LCONF )); then
+            	rm -f "$CPATH/$sd"
             	continue
             fi
             ;;
@@ -545,9 +559,9 @@ init()
    		-j|-J|--jogo)
 				shift;
    			[[ $# -lt 1 ]] && die "ERRO: requer argumento/parâmetro. (use -h for help)";
-				ctype1=$(sh_val $1);	[[ $ctype1 != "N" ]] && die "ERRO: primeiro parâmetro deve ser numérico. (use -h for help)";
+				ctype1=$(sh_val "$1");	[[ $ctype1 != "N" ]] && die "ERRO: primeiro parâmetro deve ser numérico. (use -h for help)";
    			if test $# -eq 2; then
-   				ctype2=$(sh_val $2);	[[ $ctype2 != "N" ]] && die "ERRO: segundo parâmetro deve ser numérico. (use -h for help)";
+   				ctype2=$(sh_val "$2");	[[ $ctype2 != "N" ]] && die "ERRO: segundo parâmetro deve ser numérico. (use -h for help)";
 	  			fi
  				sh_playsena "$@"
  				exit $(( $# ? 0 : 1 ))
@@ -561,4 +575,4 @@ init()
 setvarcolors
 check_deps
 [[ -z $1 ]] && { sh_usage; exit $(( $# ? 0 : 1 ));}
-init $@
+init "$@"
