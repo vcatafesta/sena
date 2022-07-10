@@ -145,14 +145,6 @@ sh_playsena()
 	sort "$filejogos" > "$filetmp"; cp "$filetmp" "$filejogos"; rm "$filetmp" 2> /dev/null
 }
 
-#sh_filedatetimestat(){ local cfiledatetime=$(stat -c %w "$1"); echo "$cfiledatetime"; }
-#sh_filedatetime(){ local cfiledatetime=$(date -r "$1" +"%d/%m/%Y %T"); echo "$cfiledatetime"; }
-#sh_filedate(){ local cfiledate=$(date -r "$1" +"%d/%m/%Y"); echo "$cfiledate"; }
-#sh_filetime(){ local cfiletime=$(date -r "$1" +"%T"); echo "$cfiletime"; }
-#sh_datetime(){ local cdatetime=$(date +"%d/%m/%Y %T"); echo "$cdatetime"; }
-#sh_time(){ local ctime=$(date +"%T"); echo "$ctime"; }
-#sh_date(){ local cdate=$(date +"%d/%m/%Y"); echo "$cdate"; }
-
 sh_filedatetimestat(){ stat -c %w "$1"; }
 sh_filedatetime(){ date -r "$1" +"%d/%m/%Y %T";}
 sh_filedate(){ date -r "$1" +"%d/%m/%Y";}
