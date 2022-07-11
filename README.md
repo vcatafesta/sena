@@ -7,7 +7,6 @@
 
 - 2 - usando wget
 	- wget https://github.com/vcatafesta/sena/raw/main/sena
-	- wget https://github.com/vcatafesta/sena/raw/main/resultadosena.txt
 
 ## #sena
 ![](https://chililinux.com/images/sena-01.png)
