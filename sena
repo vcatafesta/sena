@@ -336,13 +336,35 @@ log_failure_msg2()
    return 0
 }
 
+timespec()
+{
+	STAMP="$(echo `date +"%b %d %T %:z"` `hostname`) "
+	return 0
+}
+
+log_success_msg()
+{
+    echo -n -e "${BMPREFIX}${@}"
+    echo -e "${CURS_ZERO}${SUCCESS_PREFIX}${SET_COL}${SUCCESS_SUFFIX}"
+    logmessage=`echo "${@}" | sed 's/\\\033[^a-zA-Z]*.//g'`
+    timespec
+    echo -e "${STAMP} ${logmessage} OK" >> ${BOOTLOG}
+    return 0
+}
+
+log_success_msg2()
+{
+   printf "${BMPREFIX}${@}"
+   printf "${CURS_ZERO}${SUCCESS_PREFIX}${SET_COL}${SUCCESS_SUFFIX}\n"
+   return 0
+}
+
 log_wait_msg()
 {
    printf "${BMPREFIX}${@}"
    printf "${CURS_ZERO}${WAIT_PREFIX}${SET_COL}${WAIT_SUFFIX}\n"
    return 0
 }
-
 
 log_info_msg()
 {
