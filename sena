@@ -29,7 +29,7 @@
 #global
 
 #system
-_VERSION_='2.15.20220710'
+_VERSION_='2.17.20220710'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find)
 
 #paths/files/urls
@@ -399,7 +399,8 @@ sh_checkresultadosfaltantes()
 
 	msg "Checando a integridade do BD. Aguarde..."
 	if [[ $numUltSorteioGravado -eq 0 ]]; then
-		echo "#" >> $fileresult
+		wget -c --no-check-certificate https://github.com/vcatafesta/sena/raw/main/resultadosena.txt -qO - > $fileresult
+		#curl --compressed --insecure -s --url https://github.com/vcatafesta/sena/raw/main/resultadosena.txt --output $fileresult
 	fi
 	seq "$numUltSorteio" > $filetmp
 	local array=$(awk 'NR == FNR {file1[$1]++; next} !($0 in file1)' $fileresult $filetmp)
