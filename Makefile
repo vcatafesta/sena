@@ -1,7 +1,7 @@
 SHELL=/bin/bash
 DESTDIR=
-BINDIR=${DESTDIR}/opt/sena
-DOCDIR=${DESTDIR}/opt/sena/doc
+BINDIR=${DESTDIR}/sena
+DOCDIR=${DESTDIR}/sena/doc
 INFODIR=${DESTDIR}/usr/share/doc/sena
 #MODE=775
 MODE=664
