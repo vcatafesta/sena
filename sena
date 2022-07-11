@@ -29,7 +29,7 @@
 #global
 
 #system
-_VERSION_='2.30.20220711'
+_VERSION_='2.32.20220711'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find jq)
 
 #paths/files/urls
@@ -84,6 +84,8 @@ sh_playsena()
 	local cnow
    declare -i qtddezenas
 	declare -i qtdjogos=$1
+	declare -i nDescartadosNoBD=0
+	declare -i nDescartadosDuplicidade=0
 
    [[ $# -gt 2 ]] && die "ERRO: parâmetros em excesso. (use -h for help)"
    [[ $# -eq 2 ]] && qtddezenas=$2 || qtddezenas=6
@@ -144,6 +146,7 @@ sh_playsena()
 			if grep -q -o "$line" "$fileresult"; then  # jogo existe no BD? descarta!
 	  			printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${red}-> foi descartado, já existe no BD!${reset}\n" "$n" "$qtddezenas" "$line"
 				echo "$cnow $var $line -> foi descartado, já existe no BD!" >> "$filelog"
+				((nDescartadosNoBD++))
 				continue
 			fi
 		fi
@@ -151,6 +154,7 @@ sh_playsena()
 		if grep -q -o "$line" "$filejogos"; then  # jogo existe? descarta!
   			printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${red}-> foi descartado, já existe no jogo atual!${reset}\n" "$n" "$qtddezenas" "$line"
 			echo "$cnow $var $line -> foi descartado, já existe no jogo atual!" >> "$filelog"
+			((nDescartadosDuplicidade++))
 			continue
 		fi
 
@@ -163,6 +167,11 @@ sh_playsena()
 	replicate '#' 80 >> "$filejogosformatado"
 	filetmp=$(mktemp)
 	sort "$filejogos" > "$filetmp"; cp "$filetmp" "$filejogos"; rm "$filetmp" 2> /dev/null
+
+	msg "Resumo:"
+	msg "                    Palpites aceitos : ${white}$n"
+	msg "Palpites descartados existindo no BD : ${red}$nDescartadosNoBD"
+	msg "Palpites descartados por duplicidade : ${red}$nDescartadosDuplicidade"
 }
 
 sh_filedatetimestat(){ stat -c %w "$1"; }
