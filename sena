@@ -29,8 +29,8 @@
 #global
 
 #system
-_VERSION_='2.17.20220710'
-DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find)
+_VERSION_='2.22.20220710'
+DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find jq)
 
 #paths/files/urls
 #CPATH=/opt/sena
@@ -41,6 +41,7 @@ fileresult="$CPATH/resultadosena.txt"
 fileUltSorteio='/tmp/UltSorteio.txt'
 fileUltSorteioAtualizado='/tmp/UltSorteioAtualizado.txt'
 SITE='https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/'
+URL_GITHUB_RESULTADOSENA='https://github.com/vcatafesta/sena/raw/main/resultadosena.txt'
 
 #conf adicionais
 IFS=$' \t\n'
@@ -81,7 +82,7 @@ sh_playsena()
 	if [[ -e $filejogos ]]; then
 		cfiledatahora=$(sh_filedatetime "$filejogos")
 		njogos=$(sh_linecount "$filejogos")
-		sh_conf "${red}:: ${reset}Existe arquivo de jogos gerado em: ${yellow}$cfiledatahora${reset} com ${bold}${red}($njogos)${reset} palpites. Deseja substitui-lo?"
+		sh_conf "$(DOT)Existe arquivo de jogos gerado em: ${yellow}$cfiledatahora${reset} com ${bold}${red}($njogos)${reset} palpites. Deseja substitui-lo?"
    	LCONF=$?
 	   if ! (( LCONF )); then
 			msg "1 - Detalhes do arquivo de palpites"
@@ -93,7 +94,7 @@ sh_playsena()
    fi
 
 	[[ ! -e "$fileresult" ]] && :>| "$fileresult"
-	[[ $(sh_filesize "$fileresult") -eq 0 ]] && die "ERRO: necessário atualizar o BD. (use -h for help)"
+	[[ $(sh_filesize "$fileresult") -eq 0 ]] && erro "ERRO: necessário atualizar o BD. Prosseguindo..."
 	sh_update
 
 	declare -i resto=$(( qtddezenas % 2 ))
@@ -160,6 +161,11 @@ sh_linecount(){ awk 'END {print NR}' "$1"; }
 alltrim(){ echo "${1// /}"; } # remover todos espacos da string
 len(){ echo "${#1}"; }
 
+DOT()
+{
+	printf '%s' "${blue}:: ${reset}"
+}
+
 sh_ascii-lines()
 {
 	if [[ "$LANG" =~ 'UTF-8' ]]
@@ -191,21 +197,21 @@ replicate()
 die()
 {
 	local msg=$1; shift
-	printf '%s\n' "${bold}${red}$msg${reset}" >&2
+	printf '%s\n' "$(DOT)${bold}${red}$msg${reset}" >&2
 	exit 1
 }
 
 msg()
 {
 	local msg=$1; shift
-	printf '%s\n' "${green}$msg${reset}" >&2
+	printf '%s\n' "$(DOT)${green}$msg${reset}" >&2
 	return
 }
 
 erro()
 {
    local msg=$1; shift
-   printf '%s\n' "${bold}${yellow}$msg${reset}" >&2
+   printf '%s\n' "$(DOT)${bold}${yellow}$msg${reset}" >&2
    return
 }
 
@@ -399,8 +405,9 @@ sh_checkresultadosfaltantes()
 
 	msg "Checando a integridade do BD. Aguarde..."
 	if [[ $numUltSorteioGravado -eq 0 ]]; then
-		wget -c --no-check-certificate https://github.com/vcatafesta/sena/raw/main/resultadosena.txt -qO - > $fileresult
-		#curl --compressed --insecure -s --url https://github.com/vcatafesta/sena/raw/main/resultadosena.txt --output $fileresult
+		msg "Baixando arquivo ${URL_GITHUB_RESULTADOSENA}"
+		wget -c --no-check-certificate "${URL_GITHUB_RESULTADOSENA}" -qO - > $fileresult
+		#curl --compressed --insecure -s --url "${URL_GITHUB_RESULTADOSENA}" --output $fileresult
 	fi
 	seq "$numUltSorteio" > $filetmp
 	local array=$(awk 'NR == FNR {file1[$1]++; next} !($0 in file1)' $fileresult $filetmp)
@@ -444,8 +451,8 @@ sh_update()
 
 	#### COLETANDO DADOS DOS DOS RESULTADOS NAO INCLUÍDOS NO BD
 	declare -i falta=$(( numUltSorteio - numUltSorteioGravado ))
-	printf "Sorteios feitos pela CAIXA : %s\n" "${red}$numUltSorteio${reset}"
-	printf "Sorteios registrados no BD : %s\n" "${orange}$numUltSorteioGravado${reset}"
+	printf "$(DOT)Sorteios feitos pela CAIXA : %s\n" "${red}$numUltSorteio${reset}"
+	printf "$(DOT)Sorteios registrados no BD : %s\n" "${orange}$numUltSorteioGravado${reset}"
 	msg "${falta} novo(s) registro(s) encontrado(s)!"
 	sh_checkresultadosfaltantes "$numUltSorteioGravado" "$numUltSorteio"
 	sort -g -u "$fileresult" > "$fileresult.sort"
