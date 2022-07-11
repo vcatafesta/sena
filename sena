@@ -2,7 +2,7 @@
 #  sena - aplicativo para gerar numeros aleatorios da sena
 #
 #  Created: 2022/02/15
-#  Altered: 2022/07/10
+#  Altered: 2022/07/11
 #
 #  Copyright (c) 2022-2022, Benedito Ramos <diramos@uol.com.br>
 #  Copyright (c) 2022-2022, Vilmar Catafesta <vcatafesta@gmail.com>
@@ -29,7 +29,7 @@
 #global
 
 #system
-_VERSION_='2.26.20220710'
+_VERSION_='2.28.20220711'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find jq)
 
 #paths/files/urls
@@ -319,6 +319,21 @@ evaluate_retval()
       log_failure_msg2
    fi
    return ${error_value}
+}
+
+log_info_msg2()
+{
+    echo -n -e "${@}"
+    logmessage=`echo "${@}" | sed 's/\\\033[^a-zA-Z]*.//g'`
+    echo -n -e "${logmessage}" >> ${BOOTLOG}
+    return 0
+}
+
+log_failure_msg2()
+{
+   printf "${BMPREFIX}${@}"
+   printf "${CURS_ZERO}${FAILURE_PREFIX}${SET_COL}${FAILURE_SUFFIX}\n"
+   return 0
 }
 
 log_wait_msg()
