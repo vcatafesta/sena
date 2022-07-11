@@ -204,7 +204,7 @@ die()
 msg()
 {
 	local msg=$1; shift
-	printf '%s\n' "$(DOT)${green}$msg${reset}" >&2
+	printf '%s\n' "$(DOT)${bold}${green}$msg${reset}" >&2
 	return
 }
 
@@ -218,7 +218,7 @@ erro()
 sh_checknet()
 {
    # have internet?
-   msg "${green}Testing internet from ${SITE}"
+   msg "Testing internet from ${SITE}"
  	curl --insecure $SITE >/dev/null 2>&1 ||
    {
 	   msg "No route to server ($SITE) - Rodando com BD sem atualizar."
@@ -452,13 +452,13 @@ sh_update()
 	#### COLETANDO DADOS DOS DOS RESULTADOS NAO INCLUÍDOS NO BD
 	declare -i falta=$(( numUltSorteio - numUltSorteioGravado ))
 	printf "$(DOT)Sorteios feitos pela CAIXA : %s\n" "${red}$numUltSorteio${reset}"
-	printf "$(DOT)Sorteios registrados no BD : %s\n" "${orange}$numUltSorteioGravado${reset}"
-	msg "${falta} novo(s) registro(s) encontrado(s)!"
+	printf "$(DOT)Sorteios registrados no BD : %s\n" "${yellow}$numUltSorteioGravado${reset}"
+	msg "${cyan}${falta}${reset} novo(s) registro(s) encontrado(s)!"
 	sh_checkresultadosfaltantes "$numUltSorteioGravado" "$numUltSorteio"
 	sort -g -u "$fileresult" > "$fileresult.sort"
 	cp "$fileresult.sort" "$fileresult"
 	rm -f "$fileresult.sort" 2> /dev/null
-	msg "OK. Banco de Dados atualizado!"
+	msg "${green}OK. Banco de Dados atualizado!"
 
 	#### REMOVENDO ARQUIVOS TEMPORARIOS
 	rm $fileUltSorteio 2> /dev/null
