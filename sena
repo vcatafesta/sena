@@ -29,7 +29,7 @@
 #global
 
 #system
-_VERSION_='2.28.20220711'
+_VERSION_='2.30.20220711'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find jq)
 
 #paths/files/urls
@@ -109,7 +109,7 @@ sh_playsena()
    fi
 
 	[[ ! -e "$fileresult" ]] && :>| "$fileresult"
-	[[ $(sh_filesize "$fileresult") -eq 0 ]] && erro "ERRO: necessário atualizar o BD. Prosseguindo..."
+	[[ $(sh_filesize "$fileresult") -eq 0 ]] && log_warning_msg "AVISO: necessário atualizar o BD. Prosseguindo..."
 	sh_update
 
 	declare -i resto=$(( qtddezenas % 2 ))
@@ -172,7 +172,7 @@ sh_filetime(){ date -r "$1" +"%T"; }
 sh_datetime(){ date +"%d/%m/%Y %T"; }
 sh_time(){ date +"%T"; }
 sh_date(){ date +"%d/%m/%Y"; }
-sh_filesize(){	stat -c %s "$1"; }
+sh_filesize(){	stat -c %s "$1" 2> /dev/null; }
 sh_linecount(){ awk 'END {print NR}' "$1"; }
 alltrim(){ echo "${1// /}"; } # remover todos espacos da string
 len(){ echo "${#1}"; }
@@ -373,6 +373,14 @@ log_success_msg2()
    printf "${CURS_ZERO}${SUCCESS_PREFIX}${SET_COL}${SUCCESS_SUFFIX}\n"
    return 0
 }
+
+log_warning_msg()
+{
+   printf "${BMPREFIX}${@}"
+   printf "${CURS_ZERO}${WARNING_PREFIX}${SET_COL}${WARNING_SUFFIX}\n"
+   return 0
+}
+
 
 log_wait_msg()
 {
