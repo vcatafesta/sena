@@ -29,7 +29,7 @@
 #global
 
 #system
-_VERSION_='2.9.20220710'
+_VERSION_='2.15.20220710'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find)
 
 #paths/files/urls
@@ -391,13 +391,17 @@ sh_atualizaBD()
 sh_checkresultadosfaltantes()
 {
 	local -i numUltSorteioGravado=$1
+	local -i numUltSorteio=$2
 	local -i n=0
 	local value
 	local array
 	local filetmp=$(mktemp)
 
 	msg "Checando a integridade do BD. Aguarde..."
-	seq "$numUltSorteioGravado" > $filetmp
+	if [[ $numUltSorteioGravado -eq 0 ]]; then
+		echo "#" >> $fileresult
+	fi
+	seq "$numUltSorteio" > $filetmp
 	local array=$(awk 'NR == FNR {file1[$1]++; next} !($0 in file1)' $fileresult $filetmp)
 	rm -f $filetmp 2> /dev/null
 
@@ -442,7 +446,7 @@ sh_update()
 	printf "Sorteios feitos pela CAIXA : %s\n" "${red}$numUltSorteio${reset}"
 	printf "Sorteios registrados no BD : %s\n" "${orange}$numUltSorteioGravado${reset}"
 	msg "${falta} novo(s) registro(s) encontrado(s)!"
-	sh_checkresultadosfaltantes "$numUltSorteio"
+	sh_checkresultadosfaltantes "$numUltSorteioGravado" "$numUltSorteio"
 	sort -g -u "$fileresult" > "$fileresult.sort"
 	cp "$fileresult.sort" "$fileresult"
 	rm -f "$fileresult.sort" 2> /dev/null
