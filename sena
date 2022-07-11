@@ -61,7 +61,22 @@ false=0
 : "${D_ITEM_HELP=4}"
 : "${D_ESC=255}"
 
-[ -e /chili/core.sh ] && source /chili/core.sh
+if [ -z "${COLUMNS}" ]; then
+   COLUMNS=$(stty size)
+   COLUMNS=${COLUMNS##* }
+fi
+if [ "${COLUMNS}" = "0" ]; then
+   COLUMNS=80
+fi
+
+COL=$((${COLUMNS} - 8))
+WCOL=$((${COL} - 2))
+SET_COL="\\033[${COL}G"      # at the $COL char
+SET_WCOL="\\033[${WCOL}G"    # at the $WCOL char
+CURS_UP="\\033[1A\\033[0G"   # Up one line, at the 0'th char
+CURS_ZERO="\\033[0G"
+
+#[ -e /chili/core.sh ] && source /chili/core.sh
 
 sh_playsena()
 {
