@@ -29,11 +29,11 @@
 #global
 
 #system
-_VERSION_='2.22.20220710'
+_VERSION_='2.26.20220710'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find jq)
 
 #paths/files/urls
-#CPATH=/opt/sena
+CPATH=/opt/sena
 CPATH=$PWD
 filejogos="$CPATH/jogos.txt"
 filejogosformatado="$CPATH/jogosformatado.txt"
@@ -115,6 +115,7 @@ sh_playsena()
 		((metadeqtddezenas++))
 	fi
 
+	log_wait_msg "Processando ${red}($qtdjogos)${reset} palpites, aguarde..."
 	while [[ n -lt qtdjogos ]]; do
 	  	jogos1a30=$(shuf  -i  1-30 -n "$metadeqtddezenas" | tr -d ',e' | tr -s ' ' | sed 's/ / \n/g' | sort -n | while read -r a; do printf '%02d ' "$a" ; done)
 	  	jogos31a60=$(shuf -i 31-60 -n "$outrametade"      | tr -d ',e' | tr -s ' ' | sed 's/ / \n/g' | sort -n | while read -r a; do printf '%02d ' "$a" ; done)
@@ -217,13 +218,16 @@ erro()
 
 sh_checknet()
 {
+	xurl="$1"
    # have internet?
-   msg "Testing internet from ${SITE}"
- 	curl --insecure $SITE >/dev/null 2>&1 ||
+   log_info_msg "Testing internet from ${xurl}"
+ 	curl --insecure "$xurl" >/dev/null 2>&1 ||
    {
-	   msg "No route to server ($SITE) - Rodando com BD sem atualizar."
+	   evaluate_retval
+	   log_msg "No route to server ($xurl) - Rodando com BD sem atualizar."
 	   return 1
    }
+   evaluate_retval
    return $?
 }
 
@@ -260,6 +264,66 @@ setvarcolors(){
       black="\e[1;30m";
    fi
 }
+
+log_prefix()
+{
+   NORMAL="${reset}"            # Standard console grey
+   SUCCESS="${green}"           # Success is green
+   WARNING="${yellow}"          # Warnings are yellow
+   FAILURE="${red}"             # Failures are red
+   INFO="${cyan}"               # Information is light cyan
+   BRACKET="${blue}"            # Brackets are blue
+   BMPREFIX="     "
+   DOTPREFIX="  ${blue}::${reset} "
+   SUCCESS_PREFIX="${SUCCESS}  *  ${NORMAL}"
+   FAILURE_PREFIX="${FAILURE}*****${NORMAL}"
+   WARNING_PREFIX="${WARNING}  W  ${NORMAL}"
+   SKIP_PREFIX="${INFO}  S  ${NORMAL}"
+   SUCCESS_SUFFIX="${BRACKET}[${SUCCESS}  OK  ${BRACKET}]${NORMAL}"
+   FAILURE_SUFFIX="${BRACKET}[${FAILURE} FAIL ${BRACKET}]${NORMAL}"
+   WARNING_SUFFIX="${BRACKET}[${WARNING} WARN ${BRACKET}]${NORMAL}"
+   SKIP_SUFFIX="${BRACKET}[${INFO} SKIP ${BRACKET}]${NORMAL}"
+   WAIT_PREFIX="${WARNING}  R  ${NORMAL}"
+   WAIT_SUFFIX="${BRACKET}[${WARNING} WAIT ${BRACKET}]${NORMAL}"
+   FAILURE_PREFIX="${FAILURE}  X  ${NORMAL}"
+}
+
+evaluate_retval()
+{
+   local error_value="${?}"
+
+   if [ $# -gt 0 ]; then
+      error_value="${1}"
+   fi
+
+   if [ ${error_value} = 0 ]; then
+      log_success_msg2
+   else
+      log_failure_msg2
+   fi
+   return ${error_value}
+}
+
+log_wait_msg()
+{
+   printf "${BMPREFIX}${@}"
+   printf "${CURS_ZERO}${WAIT_PREFIX}${SET_COL}${WAIT_SUFFIX}\n"
+   return 0
+}
+
+
+log_info_msg()
+{
+   echo -n -e "${BMPREFIX}${@}"
+   return 0
+}
+
+log_msg()
+{
+   printf "${DOTPREFIX}${@}\n"
+   return 0
+}
+
 
 check_deps()
 {
@@ -403,12 +467,22 @@ sh_checkresultadosfaltantes()
 	local array
 	local filetmp=$(mktemp)
 
-	msg "Checando a integridade do BD. Aguarde..."
+
+	log_info_msg "Checando a integridade do BD. Aguarde..."; evaluate_retval
 	if [[ $numUltSorteioGravado -eq 0 ]]; then
-		msg "Baixando arquivo ${URL_GITHUB_RESULTADOSENA}"
-		wget -c --no-check-certificate "${URL_GITHUB_RESULTADOSENA}" -qO - > $fileresult
-		#curl --compressed --insecure -s --url "${URL_GITHUB_RESULTADOSENA}" --output $fileresult
+		if sh_checknet "${URL_GITHUB_RESULTADOSENA}"; then
+			#curl --compressed --insecure -s --url "${URL_GITHUB_RESULTADOSENA}" --output $fileresult
+			log_info_msg "Baixando arquivo ${URL_GITHUB_RESULTADOSENA}"
+			if ! wget -c --no-check-certificate "${URL_GITHUB_RESULTADOSENA}" -qO - > $fileresult; then
+				echo "#" >> $fileresult
+			fi
+			evaluate_retval
+		else
+			evaluate_retval
+			echo "#" >> $fileresult
+		fi
 	fi
+
 	seq "$numUltSorteio" > $filetmp
 	local array=$(awk 'NR == FNR {file1[$1]++; next} !($0 in file1)' $fileresult $filetmp)
 	rm -f $filetmp 2> /dev/null
@@ -433,12 +507,14 @@ sh_update()
 	rm "$fileUltSorteio" 2> /dev/null
 	rm "$fileUltSorteioAtualizado" 2> /dev/null
 
-	sh_checknet || return 1
+	sh_checknet "${SITE}" || return 1
 	[[ ! -e "$fileresult" ]] && :>| "$fileresult"
 
 	#### COLETANDO DADOS DO ULTIMO RESULTADO DA MEGASENA PULICADO PELA API DA CAIXA
+	log_info_msg "Coletando dados dos ultimo resultado da ${cyan}MegaSena${reset} publicado pela ${blue}CAIXA${reset}"
 #	wget "$SITE" --no-check-certificate -qO- > "$fileUltSorteio"					# mais lento
    curl --compressed --insecure -s --url "$SITE" --output "$fileUltSorteio"	# mais rápido
+   evaluate_retval
 
 	#### COLETANDO O NUMERO DO ULTIMO SORTEIO NA CAIXA e GRAVADO NO BD
 	if [[ -z $(command -v jq) ]]; then
@@ -451,14 +527,14 @@ sh_update()
 
 	#### COLETANDO DADOS DOS DOS RESULTADOS NAO INCLUÍDOS NO BD
 	declare -i falta=$(( numUltSorteio - numUltSorteioGravado ))
-	printf "$(DOT)Sorteios feitos pela CAIXA : %s\n" "${red}$numUltSorteio${reset}"
-	printf "$(DOT)Sorteios registrados no BD : %s\n" "${yellow}$numUltSorteioGravado${reset}"
-	msg "${cyan}${falta}${reset} novo(s) registro(s) encontrado(s)!"
+	log_info_msg "Sorteios feitos pela CAIXA : ${red}$numUltSorteio${reset}"; evaluate_retval
+	log_info_msg "Sorteios registrados no BD : ${yellow}$numUltSorteioGravado${reset}"; evaluate_retval
+	log_info_msg "${cyan}${falta}${reset} novo(s) registro(s) encontrado(s)!"; evaluate_retval
 	sh_checkresultadosfaltantes "$numUltSorteioGravado" "$numUltSorteio"
 	sort -g -u "$fileresult" > "$fileresult.sort"
 	cp "$fileresult.sort" "$fileresult"
 	rm -f "$fileresult.sort" 2> /dev/null
-	msg "${green}OK. Banco de Dados atualizado!"
+	log_info_msg "${green}OK. Banco de Dados atualizado!"; evaluate_retval
 
 	#### REMOVENDO ARQUIVOS TEMPORARIOS
 	rm $fileUltSorteio 2> /dev/null
@@ -608,12 +684,9 @@ init()
 }
 
 setvarcolors
+log_prefix
 check_deps
 sh_ascii-lines
+
 [[ -z $1 ]] && { sh_usage; exit $(( $# ? 0 : 1 ));}
 init "$@"
-# '["]listaDezenas["]:\s*[[]\s+["]\K([0-9]{2})(["],?\s+["])((?1))+(?2)+((?1))+(?2)+((?1))+(?2)+((?1))+(?2)+((?1))'
-# wget https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/ --no-check-certificate -qO - | jq -r '.numero'
-# jq -r '.listaDezenas[1]' temp
-# grep -Po '"descricaoFaixa":.*?[^\\]",' temp
-# cat temp | python -c "import json,sys;obj=json.load(sys.stdin);print(obj['listaDezenas']);"
