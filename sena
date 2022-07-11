@@ -265,6 +265,23 @@ setvarcolors(){
    fi
 }
 
+unsetvarcolors()
+{
+   bold=
+   reset=
+   black=
+   blue=
+   cyan=
+   green=
+   orange=
+   purple=
+   red=
+   violet=
+   white=
+   yellow=
+   pink=
+}
+
 log_prefix()
 {
    NORMAL="${reset}"            # Standard console grey
@@ -324,6 +341,17 @@ log_msg()
    return 0
 }
 
+toupper()
+{
+	declare -u TOUPPER=${@}
+	echo -e "${TOUPPER}"
+}
+
+tolower()
+{
+	declare -l TOLOWER=${@}
+	echo -e "${TOLOWER}"
+}
 
 check_deps()
 {
@@ -687,6 +715,7 @@ setvarcolors
 log_prefix
 check_deps
 sh_ascii-lines
+param="$@"
 
 [[ -z $1 ]] && { sh_usage; exit $(( $# ? 0 : 1 ));}
 init "$@"
