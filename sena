@@ -29,7 +29,7 @@
 #global
 
 #system
-_VERSION_='2.42.20220712'
+_VERSION_='2.44.20220712'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find jq)
 
 #paths/files/urls
@@ -354,7 +354,6 @@ log_failure_msg2()
 
 log_success_msg()
 {
-	info "{*}"
 	echo -n -e "${BMPREFIX}${*}"
 	echo -e "${CURS_ZERO}${SUCCESS_PREFIX}${SET_COL}${SUCCESS_SUFFIX}"
 	return 0
@@ -552,6 +551,7 @@ sh_checkresultadosfaltantes()
 {
 	local -i numUltSorteioGravado=$1
 	local -i numUltSorteio=$2
+	local -i nfalta=$3
 	local -i n=0
 	local value
 	local array
@@ -559,7 +559,7 @@ sh_checkresultadosfaltantes()
 
 	log_info_msg "Checando a integridade do BD. Aguarde..."; evaluate_retval "$?"
 	if ! (( force )); then
-		if [[ $numUltSorteioGravado -eq 0 ]]; then
+		if [[ $numUltSorteioGravado -eq 0 || nfalta -ge 11 ]]; then
 			if sh_checknet "${URL_GITHUB_RESULTADOSENA}"; then
 				#curl --compressed --insecure -s --url "${URL_GITHUB_RESULTADOSENA}" --output $fileresult
 				log_info_msg "Baixando arquivo ${URL_GITHUB_RESULTADOSENA}"
@@ -569,7 +569,6 @@ sh_checkresultadosfaltantes()
 				evaluate_retval "$?"
 			else
 				evaluate_retval "$?"
-				rm -f "$fileresult" 2> /dev/null
 				echo "#" >> "$fileresult"
 			fi
 		fi
@@ -599,6 +598,15 @@ sh_update()
 	declare -i numUltSorteio
 	declare -i numUltSorteioGravado
 
+	if (( force )); then
+		sh_conf "$(DOT)Essa opção irá zerar o BD local e baixar novamente da CAIXA e é demorada. Deseja continuar?"
+   	LCONF=$?
+	   if ! (( LCONF )); then
+	   	return
+	   fi
+		numUltSorteioGravado=0
+	fi
+
 	#### REMOVENDO ARQUIVOS TEMPORARIOS
 	rm "$fileUltSorteio" 2> /dev/null
 	rm "$fileUltSorteioAtualizado" 2> /dev/null
@@ -620,7 +628,6 @@ sh_update()
 		numUltSorteio=$(jq -r '.numero' $fileUltSorteio)
 		numUltSorteioGravado=$(awk 'END {print NR}' "$fileresult")
 	fi
-
 	if (( force )); then
 		numUltSorteioGravado=0
 	fi
@@ -630,7 +637,7 @@ sh_update()
 	log_info_msg "Sorteios feitos pela CAIXA : ${red}$numUltSorteio${reset}"; evaluate_retval "$?"
 	log_info_msg "Sorteios registrados no BD : ${yellow}$numUltSorteioGravado${reset}"; evaluate_retval "$?"
 	log_info_msg "${cyan}${falta}${reset} novo(s) registro(s) encontrado(s)!"; evaluate_retval "$?"
-	sh_checkresultadosfaltantes "$numUltSorteioGravado" "$numUltSorteio"
+	sh_checkresultadosfaltantes "$numUltSorteioGravado" "$numUltSorteio" "$falta"
 	sort -g -u "$fileresult" > "$fileresult.sort"
 	cp "$fileresult.sort" "$fileresult"
 	rm -f "$fileresult.sort" 2> /dev/null
@@ -767,7 +774,7 @@ init()
    		-c|-C|--compare) sh_compare; exit $(( $# ? 0 : 1 ));;
    		-l|-L|--log) choosefile; exit $(( $# ? 0 : 1 ));;
    		-U|--update) sh_update; exit $(( $# ? 0 : 1 ));;
-   		-F|--force) force=$true; sh_update; exit $(( $# ? 0 : 1 ));;
+   		-f|-F|--force) force=$true; sh_update; exit $(( $# ? 0 : 1 ));;
    		-V|--version) sh_logo; exit $(( $# ? 0 : 1 ));;
    		-j|-J|--jogo)
 				shift;
