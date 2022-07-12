@@ -29,7 +29,7 @@
 #global
 
 #system
-_VERSION_='2.45.20220712'
+_VERSION_='2.47.20220712'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find jq)
 
 #paths/files/urls
@@ -134,8 +134,10 @@ sh_playsena()
 
 	log_wait_msg "Processando ${red}($qtdjogos)${reset} palpites, aguarde..."
 	while [[ n -lt qtdjogos ]]; do
-	  	jogos1a30=$(shuf  -i  1-30 -n "$metadeqtddezenas" | sort -n | while read -r a; do printf '%02d ' "$a" ; done)
-	  	jogos31a60=$(shuf -i 31-60 -n "$outrametade"      | sort -n | while read -r a; do printf '%02d ' "$a" ; done)
+	  	jogos1a30="$(shuf -e {01..30} -n "$metadeqtddezenas" | sort -n )"
+	  	jogos31a60="$(shuf -i 31-60 -n "$outrametade"        | sort -n )"
+		jogos1a30="${jogos1a30//$'\n'/ }"	 	#remove \n
+		jogos31a60="${jogos31a60//$'\n'/ }" 	#remove \n
 	   line="$jogos1a30$jogos31a60"
 		cnow=$(sh_datetime)
 		((njogosregistrados++))
