@@ -29,7 +29,7 @@
 #global
 
 #system
-_VERSION_='2.41.20220712'
+_VERSION_='2.42.20220712'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find jq)
 
 #paths/files/urls
@@ -461,7 +461,7 @@ vilmar
 
 	for value in ${aJogos[*]}; {
 	   #info "$value"
-	   qtddezenas=$(( "$(len "$(alltrim "$value")")" /2 ))
+	   qtddezenas=$(( $(len $(alltrim "$value")) /2 ))
 	   if [[ ! "${aResult[*]}" =~ "${value}" ]]; then
 			printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${green} OK ↑ não encontrado no BD${reset}\n" "$n" $qtddezenas "$value"
 	   else
