@@ -759,6 +759,9 @@ display_result()
 	${DIALOG}   --title  "$1" 									\
             	--no-collapse              				\
                --no-cr-wrap               				\
+               --ok-label   	"Voltarx"               \
+               --cancel-label "Sair"  	               \
+               --exit-label  "Voltar"						\
                --backtitle "${0##*/} v${_VERSION_}"	\
                --textbox   "$1"           				\
                0 0
