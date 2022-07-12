@@ -29,7 +29,7 @@
 #global
 
 #system
-_VERSION_='2.40.20220712'
+_VERSION_='2.41.20220712'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find jq)
 
 #paths/files/urls
@@ -569,10 +569,12 @@ sh_checkresultadosfaltantes()
 				evaluate_retval "$?"
 			else
 				evaluate_retval "$?"
+				rm -f "$fileresult" 2> /dev/null
 				echo "#" >> "$fileresult"
 			fi
 		fi
 	else
+		rm -f "$fileresult" 2> /dev/null
 		echo "#" > "$fileresult"
 	fi
 
