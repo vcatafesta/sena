@@ -29,7 +29,7 @@
 #global
 
 #system
-_VERSION_='2.44.20220712'
+_VERSION_='2.45.20220712'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find jq)
 
 #paths/files/urls
@@ -82,20 +82,20 @@ sh_playsena()
 {
 	local filelog
 	local cnow
+   local	LCONF=1
    declare -i qtddezenas
 	declare -i qtdjogos=$1
 	declare -i nDescartadosNoBD=0
 	declare -i nDescartadosDuplicidade=0
 
-   [[ $# -gt 2 ]] && die "ERRO: parâmetros em excesso. (use -h for help)"
-   [[ $# -eq 2 ]] && qtddezenas=$2 || qtddezenas=6
+   [[ $# -gt 2          ]] && die "ERRO: parâmetros em excesso. (use -h for help)"
+   [[ $# -eq 2          ]] && qtddezenas=$2 || qtddezenas=6
  	[[ qtdjogos   -lt 1  ]] && die "ERRO: mínimo de 1 jogo brother! (use -h for help)"
  	[[ qtddezenas -gt 15 ]] && die "ERRO: máximo de dezenas jogadas é: 15. (use -h for help)"
  	[[ qtddezenas -lt  6 ]] && die "ERRO: mínimo de dezenas jogadas é: 6. (use -h for help)"
  	[[ qtddezenas -gt 15 ]] && qtddezenas=15
  	[[ qtddezenas -lt  6 ]] && qtddezenas=6
 
-  	LCONF=1
 	if [[ -e $filejogos ]]; then
 		cfiledatahora=$(sh_filedatetime "$filejogos")
 		njogos=$(sh_linecount "$filejogos")
@@ -134,9 +134,8 @@ sh_playsena()
 
 	log_wait_msg "Processando ${red}($qtdjogos)${reset} palpites, aguarde..."
 	while [[ n -lt qtdjogos ]]; do
-	  	jogos1a30=$(shuf  -i  1-30 -n "$metadeqtddezenas" | tr -d ',e' | tr -s ' ' | sed 's/ / \n/g' | sort -n | while read -r a; do printf '%02d ' "$a" ; done)
-	  	jogos31a60=$(shuf -i 31-60 -n "$outrametade"      | tr -d ',e' | tr -s ' ' | sed 's/ / \n/g' | sort -n | while read -r a; do printf '%02d ' "$a" ; done)
-	  	#echo $jogos1a30 $jogos31a60 # 09 11 14 35 37 50
+	  	jogos1a30=$(shuf  -i  1-30 -n "$metadeqtddezenas" | sort -n | while read -r a; do printf '%02d ' "$a" ; done)
+	  	jogos31a60=$(shuf -i 31-60 -n "$outrametade"      | sort -n | while read -r a; do printf '%02d ' "$a" ; done)
 	   line="$jogos1a30$jogos31a60"
 		cnow=$(sh_datetime)
 		((njogosregistrados++))
