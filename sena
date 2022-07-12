@@ -2,7 +2,7 @@
 #  sena - aplicativo para gerar numeros aleatorios da sena
 #
 #  Created: 2022/02/15
-#  Altered: 2022/07/11
+#  Altered: 2022/07/12
 #
 #  Copyright (c) 2022-2022, Benedito Ramos <diramos@uol.com.br>
 #  Copyright (c) 2022-2022, Vilmar Catafesta <vcatafesta@gmail.com>
@@ -29,7 +29,7 @@
 #global
 
 #system
-_VERSION_='2.35.20220711'
+_VERSION_='2.40.20220712'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find jq)
 
 #paths/files/urls
@@ -329,13 +329,6 @@ log_prefix()
    FAILURE_PREFIX="${FAILURE}  X  ${NORMAL}"
 }
 
-timespec()
-{
-#	STAMP="$(echo `date +"%b %d %T %:z"` `hostname`) "
-	STAMP="$(date +"%b %d %T %:z" ) $(hostname)"
-	return 0
-}
-
 evaluate_retval()
 {
    local error_value="$?"
@@ -518,21 +511,30 @@ sh_atualizaBD()
    curl --compressed --insecure -s --url "$SITE$contLinha" --output "$fileUltSorteioAtualizado"		# mais rápido
 
 	if [[ -z $(command -v jq) ]]; then
-		listaDezenas=$(sed -n '/listaDezenas/,/],/p' "$fileUltSorteioAtualizado" | sed 's/[^0-9]//g' | sed -e "s/\r//g" | awk -F"-" '{print $1}')
-	   listaDezenas=$(echo "$listaDezenas" | cut -c1-18)
-	   dataApuracao=$(grep '"dataApuracao":' "$fileUltSorteioAtualizado" | awk '{print $2}' | sed 's/\"//g' | sed 's/\,//g' | sed -e "s/\r//g" )
+		listaDezenas=$(sed -n '/"listaDezenas"/,+6p' "$fileUltSorteioAtualizado" | sed 's/[^0-9]//g')
+		listaDezenas="${listaDezenas//$'\n'/ }" #remove \n
+		dataApuracao=$(awk -F'"' '/"dataApuracao": "[0-9]{2}\/[0-9]{2}\/[0-9]{4}/ {print $4}' "$fileUltSorteioAtualizado")
 #	   valorEstimadoProximoConcurso=$(grep '"valorEstimadoProximoConcurso":' "$fileUltSorteioAtualizado" | awk -F"-" '{print $2}' | sed 's/\,//g')
-	   dadosSena=$(sed -n '/"faixa": 1/,/},/p' "$fileUltSorteioAtualizado")
-#	   dadosQuina=$(sed -n '/"faixa": 2/,/},/p' "$fileUltSorteioAtualizado")
-#	   dadosQuadra=$(sed -n '/"faixa": 3/,/},/p' "$fileUltSorteioAtualizado")
-	   numGanhadoresSena=$(echo "$dadosSena" | awk -F'"' '{ print $5 }' | sed 's/://g' | sed 's/,//g')
-	   valorPremioSena=$(echo "$dadosSena" | awk -F'"' '{print $7}' | sed 's/://g' | sed 's/,//g')
-	   valorPremioSena=$(awk '{printf "%.2f\n" ,$1}' <<< "$valorPremioSena")
-	   valorPremioSenaFormat=$(echo "$valorPremioSena" | sed -e :a -e 's/\(.*[0-9]\)\([0-9]\{3\}\)/\1,\2/;ta' | tr ',.' '.,')
-	   varLinhaInteira=$(echo $contLinha - $dataApuracao - $listaDezenas - $valorPremioSenaFormat - $numGanhadoresSena)
-	   echo $varLinhaInteira |& tee -a $fileresult
+		dadosSena=$(sed -n '/"faixa": 1/,+2p' "$fileUltSorteioAtualizado")
+		dadosQuina=$(sed -n '/"faixa": 2/,+2p' "$fileUltSorteioAtualizado")
+		dadosQuadra=$(sed -n '/"faixa": 3/,+2p' "$fileUltSorteioAtualizado")
+	   numGanhadoresSena=$(awk '/"numeroDeGanhadores":/ {print $2}' <<< "$dadosSena" | sed 's/,//g')
+	   numGanhadoresQuina=$(awk '/"numeroDeGanhadores":/ {print $2}' <<< "$dadosQuina" | sed 's/,//g')
+	   numGanhadoresQuadra=$(awk '/"numeroDeGanhadores":/ {print $2}' <<< "$dadosQuadra" | sed 's/,//g')
+	   valorPremioSena=$(awk '/"valorPremio":/ {print $2}' <<< "$dadosSena" 		\
+	   	|sed 's/,//g'|awk '{printf "%.2f\n" ,$1}' 										\
+	   	|sed -e :a -e 's/\(.*[0-9]\)\([0-9]\{3\}\)/\1,\2/;ta'| tr ',.' '.,')
+	   valorPremioQuina=$(awk '/"valorPremio":/ {print $2}' <<< "$dadosQuina" 		\
+	   	|sed 's/,//g'|awk '{printf "%.2f\n" ,$1}' 										\
+	   	|sed -e :a -e 's/\(.*[0-9]\)\([0-9]\{3\}\)/\1,\2/;ta'| tr ',.' '.,')
+	   valorPremioQuadra=$(awk '/"valorPremio":/ {print $2}' <<< "$dadosQuadra" 	\
+	   	|sed 's/,//g'|awk '{printf "%.2f\n" ,$1}' 										\
+	   	|sed -e :a -e 's/\(.*[0-9]\)\([0-9]\{3\}\)/\1,\2/;ta'| tr ',.' '.,')
+	   varLinhaInteira="$contLinha - $dataApuracao - $listaDezenas - $valorPremioSena - $numGanhadoresSena - $valorPremioQuina - $numGanhadoresQuina - $valorPremioQuadra - $numGanhadoresQuadra"
+	   tee -a "$fileresult" <<< "$varLinhaInteira"
 	else # usando jq
 		listaDezenas=$(jq -r '.listaDezenas[range(0;6)]' "$fileUltSorteioAtualizado")
+		listaDezenas="${listaDezenas//$'\n'/ }"  #remove \n
 	   dataApuracao=$(jq -r '.dataApuracao' "$fileUltSorteioAtualizado")
 #	   valorEstimadoProximoConcurso=$(jq -r '.valorEstimadoProximoConcurso' "$fileUltSorteioAtualizado")
 	   numGanhadoresSena=$(jq -r '.listaRateioPremio[0].numeroDeGanhadores' "$fileUltSorteioAtualizado")
@@ -541,8 +543,8 @@ sh_atualizaBD()
 	   valorPremioQuina=$(jq -r '.listaRateioPremio[1].valorPremio' "$fileUltSorteioAtualizado"|awk '{printf "%.2f\n" ,$1}'|sed -e :a -e 's/\(.*[0-9]\)\([0-9]\{3\}\)/\1,\2/;ta' | tr ',.' '.,')
 	   numGanhadoresQuadra=$(jq -r '.listaRateioPremio[2].numeroDeGanhadores' "$fileUltSorteioAtualizado")
 	   valorPremioQuadra=$(jq -r '.listaRateioPremio[2].valorPremio' "$fileUltSorteioAtualizado"|awk '{printf "%.2f\n" ,$1}'|sed -e :a -e 's/\(.*[0-9]\)\([0-9]\{3\}\)/\1,\2/;ta' | tr ',.' '.,')
-	   varLinhaInteira=$(echo $contLinha - $dataApuracao - $listaDezenas - $valorPremioSena - $numGanhadoresSena - $valorPremioQuina - $numGanhadoresQuina - $valorPremioQuadra - $numGanhadoresQuadra)
-	   tee -a $fileresult <<< "$varLinhaInteira"
+	   varLinhaInteira="$contLinha - $dataApuracao - $listaDezenas - $valorPremioSena - $numGanhadoresSena - $valorPremioQuina - $numGanhadoresQuina - $valorPremioQuadra - $numGanhadoresQuadra"
+	   tee -a "$fileresult" <<< "$varLinhaInteira"
 	fi
 }
 
