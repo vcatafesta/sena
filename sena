@@ -134,11 +134,11 @@ sh_playsena()
 
 	log_wait_msg "Processando ${red}($qtdjogos)${reset} palpites, aguarde..."
 	while [[ n -lt qtdjogos ]]; do
-	  	jogos1a30="$(shuf -e {01..30} -n "$metadeqtddezenas" | sort -n )"
-	  	jogos31a60="$(shuf -i 31-60 -n "$outrametade"        | sort -n )"
+	  	jogos1a30="$(shuf  -e {01..30} -n "$metadeqtddezenas" | sort -n )"
+	  	jogos31a60="$(shuf -e {31..60} -n "$outrametade"      | sort -n )"
 		jogos1a30="${jogos1a30//$'\n'/ }"	 	#remove \n
 		jogos31a60="${jogos31a60//$'\n'/ }" 	#remove \n
-	   line="$jogos1a30$jogos31a60"
+	   line="$jogos1a30 $jogos31a60"
 		cnow=$(sh_datetime)
 		((njogosregistrados++))
 		[[ njogosregistrados -lt 10 ]] && var="Jogo 0$njogosregistrados: " || var="Jogo $njogosregistrados: "
