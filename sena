@@ -823,7 +823,7 @@ init()
    			DIALOG="whiptail"
    			choosefile; exit $(( $# ? 0 : 1 ))
    			;;
-   		-lg|--glog)
+   		-lg|--logl)
 				FULLDIALOG=$true
    			DIALOG="dialog --no-lines"
    			choosefile; exit $(( $# ? 0 : 1 ))
