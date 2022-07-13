@@ -29,7 +29,7 @@
 #global
 
 #system
-_VERSION_='2.47.20220712'
+_VERSION_='2.49.20220712'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find jq)
 
 #paths/files/urls
@@ -96,6 +96,7 @@ sh_playsena()
  	[[ qtddezenas -gt 15 ]] && qtddezenas=15
  	[[ qtddezenas -lt  6 ]] && qtddezenas=6
 
+:<<'comment'
 	if [[ -e $filejogos ]]; then
 		cfiledatahora=$(sh_filedatetime "$filejogos")
 		njogos=$(sh_linecount "$filejogos")
@@ -109,7 +110,14 @@ sh_playsena()
 			exit
 	   fi
    fi
+comment
 
+	if [[ -e $filejogos ]]; then
+		cfiledatahora=$(sh_filedatetime "$filejogos")
+		njogos=$(sh_linecount "$filejogos")
+		msg "Existe arquivo de: ${yellow}$cfiledatahora${reset} com ${bold}${red}($njogos)${reset} palpites. ${red}Poderá examina-lo com a opção -l ${cyan}↑↑ Gerando novos palpites ↑↑"
+		sleep 1
+	fi
 	[[ ! -e "$fileresult" ]] && :>| "$fileresult"
 	[[ $(sh_filesize "$fileresult") -eq 0 ]] && log_warning_msg "AVISO: necessário atualizar o BD. Prosseguindo..."
 	sh_update
@@ -173,6 +181,7 @@ sh_playsena()
 	msg "                    Palpites aceitos : ${white}$n"
 	msg "Palpites descartados existindo no BD : ${red}$nDescartadosNoBD"
 	msg "Palpites descartados por duplicidade : ${red}$nDescartadosDuplicidade"
+	msg "Caso ganhar, considere fazer alguma doação para os desenvolvedores deste software :)"
 }
 
 sh_filedatetimestat(){ stat -c %w "$1"; }
