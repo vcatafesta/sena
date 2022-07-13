@@ -29,7 +29,7 @@
 #global
 
 #system
-_VERSION_='2.53.20220713'
+_VERSION_='2.54.20220713'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog whiptail find jq)
 
 #paths/files/urls
@@ -767,17 +767,18 @@ sh_usage()
 	cat <<EOF
 ${white}sena v$_VERSION_${reset}
 ${orange}uso:${reset}
-   sena ${pink}-j 3${cyan}                # jogar 03 palpites (padrão 6 dezenas)${reset}
-   sena ${pink}-j 10${cyan}               # jogar 10 palpites (padrão 6 dezenas)${reset}
-   sena ${pink}-j 10 6${cyan}             # jogar 10 palpites com 06 (min) dezenas${reset}
-   sena ${pink}-j 5 15${cyan}             # jogar 05 palpites com 15 (max) dezenas${reset}
-   sena ${pink}-h|--help${cyan}           # este help${reset}
-   sena ${pink}-c|--compare${cyan}        # comparar palpites com o BD${reset}
-   sena ${pink}-gl--glog${cyan}           # exibir log de palpites efetuados - (exibiçao com whiptail)${reset}
-   sena ${pink}-l|--log${cyan}            # exibir log de palpites efetuados - (exibição com dialog (default)${reset}
-   sena ${pink}-U|--update${cyan}         # atualizar BD com a CAIXA${reset}
-   sena ${pink}-F|--force${cyan}          # força a atualização do zero do BD com a CAIXA${reset}
-   sena ${pink}-V|--version${cyan}        # exibe versão do aplicativo${reset}
+   sena ${red}-j 3${cyan}                # jogar 03 palpites (padrão 6 dezenas)${reset}
+   sena ${red}-j 10${cyan}               # jogar 10 palpites (padrão 6 dezenas)${reset}
+   sena ${red}-j 10 6${cyan}             # jogar 10 palpites com 06 (min) dezenas${reset}
+   sena ${red}-j 5 15${cyan}             # jogar 05 palpites com 15 (max) dezenas${reset}
+   sena ${red}-h${green} |${red}--help${cyan}          # este help${reset}
+   sena ${red}-c${green} |${red}--compare${cyan}       # comparar palpites com o BD${reset}
+   sena ${red}-gl${green}|${red}--glog${cyan}          # exibir log de palpites efetuados - (exibiçao com whiptail)${reset}
+   sena ${red}-l${green} |${red}--log${cyan}           # exibir log de palpites efetuados - (exibição com dialog - default)${reset}
+   sena ${red}-lg${green}|${red}--logl${cyan}          # exibir log de palpites efetuados - (exibição com dialog sem bordas)${reset}
+   sena ${red}-U${green} |${red}--update${cyan}        # atualizar BD com a CAIXA${reset}
+   sena ${red}-F${green} |${red}--force${cyan}         # força a atualização do zero do BD com a CAIXA${reset}
+   sena ${red}-V${green} |${red}--version${cyan}       # exibe versão do aplicativo${reset}
 EOF
 }
 
@@ -820,6 +821,11 @@ init()
    		-gl|--glog)
 				FULLDIALOG=$false
    			DIALOG="whiptail"
+   			choosefile; exit $(( $# ? 0 : 1 ))
+   			;;
+   		-lg|--glog)
+				FULLDIALOG=$true
+   			DIALOG="dialog --no-lines"
    			choosefile; exit $(( $# ? 0 : 1 ))
    			;;
    		-j|-J|--jogo)
