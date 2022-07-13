@@ -2,7 +2,7 @@
 #  sena - aplicativo para gerar numeros aleatorios da sena
 #
 #  Created: 2022/02/15
-#  Altered: 2022/07/12
+#  Altered: 2022/07/13
 #
 #  Copyright (c) 2022-2022, Benedito Ramos <diramos@uol.com.br>
 #  Copyright (c) 2022-2022, Vilmar Catafesta <vcatafesta@gmail.com>
@@ -29,8 +29,8 @@
 #global
 
 #system
-_VERSION_='2.49.20220712'
-DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find jq)
+_VERSION_='2.51.20220713'
+DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog whiptail find jq)
 
 #paths/files/urls
 CPATH=/opt/sena
@@ -53,7 +53,7 @@ true=1
 false=0
 
 # flag dialog exit status codes
-: "${DIALOG=dialog}"
+: "${DIALOG="whiptail"}" #:"${DIALOG="whiptail"}"
 : "${D_OK=0}"
 : "${D_CANCEL=1}"
 : "${D_HELP=2}"
@@ -61,6 +61,11 @@ false=0
 : "${D_ITEM_HELP=4}"
 : "${D_ESC=255}"
 
+if [ "${DIALOG}" == 'dialog' ]; then
+	FULLDIALOG=$true
+else
+	FULLDIALOG=$false
+fi
 if [ -z "${COLUMNS}" ]; then
    COLUMNS=$(stty size)
    COLUMNS=${COLUMNS##* }
@@ -201,7 +206,7 @@ DOT()
 	printf '%s' "${blue}:: ${reset}"
 }
 
-sh_ascii-lines()
+sh_ascii_lines()
 {
 	if [[ "$LANG" =~ 'UTF-8' ]]
 	then
@@ -702,19 +707,30 @@ choosefile()
          ((nc++))
       done
 
-#              --ascii-lines													               \
-      sd=$(${DIALOG}                                                             \
-               --clear															               \
-               --title        "Arquivos de Log"							               \
-               --backtitle 	"${0##*/} v${_VERSION_}"									\
-               --ok-label     "Visualizar"						                     \
-               --cancel-label "Sair"   									               \
-               --colors                                                          \
-               --extra-button                                                    \
-               --extra-label  "Excluir"								                  \
-               --menu         "\nArquivos Log de jogos"  			               \
-               0 0 0 "${array[@]}" 2>&1 >/dev/tty  )
-
+#		          --ascii-lines													               \
+		if (( FULLDIALOG )); then
+	      sd=$(${DIALOG}                                                             \
+	               --clear															               \
+	               --title        "Arquivos de Log"							               \
+	               --backtitle 	"${0##*/} v${_VERSION_}"									\
+	               --ok-label     "Visualizar"						                     \
+	               --cancel-label "Sair"   									               \
+	               --colors                                                          \
+	               --extra-button                                                    \
+	               --extra-label  "Excluir"								                  \
+	               --menu         "\nArquivos Log de jogos"  			               \
+	               0 0 0 "${array[@]}" 2>&1 >/dev/tty  )
+		else
+	      sd=$(${DIALOG}                                                             \
+	               --clear															               \
+	               --fb																               \
+						--ok-button "Visualizar"														\
+						--cancel-button "Sair"															\
+	               --backtitle 	"${0##*/} v${_VERSION_}"									\
+	               --title        "Arquivos de Log"							               \
+	               --menu         "\nArquivos Log de jogos"  			               \
+	               0 0 0 "${array[@]}" 2>&1 >/dev/tty  )
+		fi
       exit_status=$?
       case $exit_status in
 			"$D_OK")
@@ -763,19 +779,29 @@ ${orange}uso:${reset}
 EOF
 }
 
-#					--ascii-lines				               \
-
+#					 --ascii-lines				               \
 display_result()
 {
-	${DIALOG}   --title  "$1" 									\
-            	--no-collapse              				\
-               --no-cr-wrap               				\
-               --ok-label   	"Voltarx"               \
-               --cancel-label "Sair"  	               \
-               --exit-label  "Voltar"						\
-               --backtitle "${0##*/} v${_VERSION_}"	\
-               --textbox   "$1"           				\
-               0 0
+	if (( FULLDIALOG )); then
+		${DIALOG}   --title  "$1" 									\
+	               --clear						               \
+	               --no-cr-wrap               				\
+	            	--no-collapse              				\
+	               --ok-label   	"Voltar"                \
+	               --cancel-label "Sair"  	               \
+	               --exit-label  "Voltar"						\
+	               --backtitle "${0##*/} v${_VERSION_}"	\
+	               --textbox   "$1"           				\
+	               0 0
+	else
+		${DIALOG}   --title  "$1" 									\
+	               --clear						               \
+	               --fb							               \
+						--ok-button "Voltar"							\
+	               --backtitle "${0##*/} v${_VERSION_}"	\
+	               --textbox   "$1"           				\
+	               0 0
+	fi
 }
 
 init()
@@ -808,7 +834,7 @@ init()
 setvarcolors
 log_prefix
 check_deps
-sh_ascii-lines
+sh_ascii_lines
 
 [[ -z $1 ]] && { sh_usage; exit $(( $# ? 0 : 1 ));}
 init "$@"
