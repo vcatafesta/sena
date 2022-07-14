@@ -2,10 +2,11 @@
 #  sena - aplicativo para gerar numeros aleatorios da sena
 #
 #  Created: 2022/02/15
-#  Altered: 2022/07/13
+#  Altered: 2022/07/14
 #
 #  Copyright (c) 2022-2022, Benedito Ramos <diramos@uol.com.br>
 #  Copyright (c) 2022-2022, Vilmar Catafesta <vcatafesta@gmail.com>
+#  Copyright (c) 2022-2022, fgusta <https://github.com/0x6775737461>
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -29,7 +30,7 @@
 #global
 
 #system
-_VERSION_='2.55.20220713'
+_VERSION_='2.56.20220714'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog whiptail find jq)
 
 #paths/files/urls
@@ -94,20 +95,23 @@ sh_playsena()
 	declare -i nDescartadosNoBD=0
 	declare -i nDescartadosDuplicidade=0
 
-   [[ $# -gt 2          ]] && die "ERRO: parâmetros em excesso. (use -h for help)"
-   [[ $# -eq 2          ]] && qtddezenas=$2 || qtddezenas=6
- 	[[ qtdjogos   -lt 1  ]] && die "ERRO: mínimo de 1 jogo brother! (use -h for help)"
- 	[[ qtddezenas -gt 15 ]] && die "ERRO: máximo de dezenas jogadas é: 15. (use -h for help)"
- 	[[ qtddezenas -lt  6 ]] && die "ERRO: mínimo de dezenas jogadas é: 6. (use -h for help)"
- 	[[ qtddezenas -gt 15 ]] && qtddezenas=15
- 	[[ qtddezenas -lt  6 ]] && qtddezenas=6
+   (( $# > 2          )) && die "ERRO: parâmetros em excesso. (use -h for help)"
+   (( $# == 2         )) && qtddezenas=$2 || qtddezenas=6
+ 	(( qtdjogos   < 1  )) && die "ERRO: mínimo de 1 jogo brother! (use -h for help)"
+ 	(( qtddezenas > 15 )) && die "ERRO: máximo de dezenas jogadas é: 15. (use -h for help)"
+ 	(( qtddezenas < 6  )) && die "ERRO: mínimo de dezenas jogadas é: 6. (use -h for help)"
+ 	(( qtddezenas > 15 )) && qtddezenas=15
+ 	(( qtddezenas < 6  )) && qtddezenas=6
 
 :<<'comment'
 	if [[ -e $filejogos ]]; then
 		cfiledatahora=$(sh_filedatetime "$filejogos")
 		njogos=$(sh_linecount "$filejogos")
-		sh_conf "$(DOT)Existe arquivo de jogos gerado em: ${yellow}$cfiledatahora${reset} com ${bold}${red}($njogos)${reset} palpites. Deseja substitui-lo?"
+		sh_conf "$(DOT)Existe arquivo de jogos gerado em: \
+			${yellow}$cfiledatahora${reset} com ${bold}${red}($njogos)${reset} palpites. \
+			Deseja substitui-lo?"
    	LCONF=$?
+
 	   if ! (( LCONF )); then
 			msg "1 - Detalhes do arquivo de palpites"
 			echo -n "$bold$cyan"; stat "$filejogos"; echo -n "$reset"
@@ -121,11 +125,13 @@ comment
 	if [[ -e $filejogos ]]; then
 		cfiledatahora=$(sh_filedatetime "$filejogos")
 		njogos=$(sh_linecount "$filejogos")
-		msg "Existe arquivo de: ${yellow}$cfiledatahora${reset} com ${bold}${red}($njogos)${reset} palpites. ${red}Poderá examina-lo com a opção -l ${cyan}↑↑ Gerando novos palpites ↑↑"
+		msg "Existe arquivo de: ${yellow}$cfiledatahora${reset} com ${bold}${red}($njogos)${reset} palpites. \
+		${red}Poderá examina-lo com a opção -l ${cyan}↑↑ Gerando novos palpites ↑↑"
 		sleep 1
 	fi
-	[[ ! -e "$fileresult" ]] && :>| "$fileresult"
-	[[ $(sh_filesize "$fileresult") -eq 0 ]] && log_warning_msg "AVISO: necessário atualizar o BD. Prosseguindo..."
+	test ! -e "$fileresult" && :>| "$fileresult"
+	[[ $(sh_filesize "$fileresult") -eq 0 ]] && \
+		log_warning_msg "AVISO: necessário atualizar o BD. Prosseguindo..."
 	sh_update
 
 	declare -i resto=$(( qtddezenas % 2 ))
@@ -133,7 +139,10 @@ comment
 	declare -i outrametade="$metadeqtddezenas"
 	declare -i n=0
 	declare -i njogosregistrados=0
-	filelog=$(date +"%d%m%Y-%T" | sed 's/://g').log
+
+	filelog=$(date +"%d%m%Y-%T")
+	# param expansion to remove the colon
+  	filelog="${filelog//:/}.log"
 
    if (( LCONF )); then
 		:>| "$filejogos"
@@ -142,24 +151,29 @@ comment
 	fi
 	:>| "$filelog"
 
- 	if [[ resto -gt 0 ]] ; then
-		((metadeqtddezenas++))
-	fi
+ 	(( resto > 0 )) && ((metadeqtddezenas++))
 
 	log_wait_msg "Processando ${red}($qtdjogos)${reset} palpites, aguarde..."
-	while [[ n -lt qtdjogos ]]; do
+	while (( n < qtdjogos )); do
 	  	jogos1a30="$(shuf  -e {01..30} -n "$metadeqtddezenas" | sort -n )"
 	  	jogos31a60="$(shuf -e {31..60} -n "$outrametade"      | sort -n )"
-		jogos1a30="${jogos1a30//$'\n'/ }"	 	#remove \n
-		jogos31a60="${jogos31a60//$'\n'/ }" 	#remove \n
+
+		# removing '\n'
+		jogos1a30="${jogos1a30//$'\n'/ }"
+		jogos31a60="${jogos31a60//$'\n'/ }"
+
 	   line="$jogos1a30 $jogos31a60"
 		cnow=$(sh_datetime)
+
 		((njogosregistrados++))
-		[[ njogosregistrados -lt 10 ]] && var="Jogo 0$njogosregistrados: " || var="Jogo $njogosregistrados: "
+		(( njogosregistrados < 10 )) && \
+			var="Jogo 0$njogosregistrados: " || \
+			var="Jogo $njogosregistrados: "
 
   	 	if [[ qtddezenas -eq 6 ]] ; then
 			if grep -q -o "$line" "$fileresult"; then  # jogo existe no BD? descarta!
-	  			printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${red}-> foi descartado, já existe no BD!${reset}\n" "$n" "$qtddezenas" "$line"
+	  			printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: \
+	  			$pink%s${red}-> foi descartado, já existe no BD!${reset}\n" "$n" "$qtddezenas" "$line"
 				echo "$cnow $var $line -> foi descartado, já existe no BD!" >> "$filelog"
 				((nDescartadosNoBD++))
 				continue
@@ -167,21 +181,27 @@ comment
 		fi
 
 		if grep -q -o "$line" "$filejogos"; then  # jogo existe? descarta!
-  			printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${red}-> foi descartado, já existe no jogo atual!${reset}\n" "$n" "$qtddezenas" "$line"
+  			printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: \
+  			$pink%s${red}-> foi descartado, já existe no jogo atual!${reset}\n" "$n" "$qtddezenas" "$line"
 			echo "$cnow $var $line -> foi descartado, já existe no jogo atual!" >> "$filelog"
 			((nDescartadosDuplicidade++))
 			continue
 		fi
 
 		((n++))
-		printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${green}-> foi aceito${reset}\n" "$n" "$qtddezenas" "$line"
+		printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: \
+			$pink%s${green}-> foi aceito${reset}\n" "$n" "$qtddezenas" "$line"
 		echo "$line" >> "$filejogos"
 		echo "$cnow $var $line" >> "$filejogosformatado"
 		echo "$cnow $var $line -> foi aceito" >> "$filelog"
 	done
+
 	replicate '#' 80 >> "$filejogosformatado"
 	filetmp=$(mktemp)
-	sort "$filejogos" > "$filetmp"; cp "$filetmp" "$filejogos"; rm "$filetmp" 2> /dev/null
+
+	sort "$filejogos" > "$filetmp"
+	cp "$filetmp" "$filejogos"
+	rm "$filetmp" 2> /dev/null
 
 	msg "Resumo:"
 	msg "                    Palpites aceitos : ${white}$n"
@@ -458,8 +478,8 @@ sh_compare()
 
 	IFS=$'\n'
 	#local re='[0-9]{2}[ ]?'
-	local reR='([0-9]{2}[[:space:]]+)((?1))+'
-	local reJ='([0-9]{2}[[:space:]]?)((?1))+'
+	local reR='([0-9]{2}[[:blank:]]+)((?1))+'
+	local reJ='([0-9]{2}[[:blank:]]?)((?1))+'
 #	aResult=($(awk -F'-' '{ print $3 }' $fileresult))
 #	aJogos=($(awk '{print " "$0}' $filejogos))
 #	aResult=($(awk -F "$reR" 'lista[$1]++' $fileresult))
