@@ -29,7 +29,7 @@
 #global
 
 #system
-_VERSION_='2.54.20220713'
+_VERSION_='2.55.20220713'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog whiptail find jq)
 
 #paths/files/urls
@@ -450,6 +450,8 @@ sh_conf()
 sh_compare()
 {
    local -i qtddezenas
+   local aResult
+   local aJogos
 
 	[[ ! -e "$filejogos"                 ]] && die "ERRO: nenhum jogo realizado para comparar. (use -h for help)"
 	[[ $(sh_filesize "$filejogos") -eq 0 ]] && die "ERRO: nenhum jogo realizado para comparar. (use -h for help)"
@@ -458,12 +460,12 @@ sh_compare()
 	#local re='[0-9]{2}[ ]?'
 	local reR='([0-9]{2}[[:space:]]+)((?1))+'
 	local reJ='([0-9]{2}[[:space:]]?)((?1))+'
-#	local aResult=($(awk -F'-' '{ print $3 }' $fileresult))
-#	local aJogos=($(awk '{print " "$0}' $filejogos))
-#	local aResult=($(awk -F "$reR" 'lista[$1]++' $fileresult))
-#	local aJogos=($(awk -F "$reJ" 'lista[$1]++' $filejogos))
-	local aResult=($(grep -Po "$reR" "$fileresult"))
-	local aJogos=($(grep -Po "$reJ" "$filejogos"))
+#	aResult=($(awk -F'-' '{ print $3 }' $fileresult))
+#	aJogos=($(awk '{print " "$0}' $filejogos))
+#	aResult=($(awk -F "$reR" 'lista[$1]++' $fileresult))
+#	aJogos=($(awk -F "$reJ" 'lista[$1]++' $filejogos))
+	aResult=($(grep -Po "$reR" "$fileresult"))
+	aJogos=($(grep -Po "$reJ" "$filejogos"))
 	local n=1
 	local value
 
@@ -474,10 +476,10 @@ sh_compare()
 	echo "${aJogos[1]}"
 vilmar
 
-	for value in ${aJogos[*]}; {
+	for value in "${aJogos[@]}"; {
 	   #info "$value"
-	   qtddezenas=$(( $(len $(alltrim "$value")) /2 ))
-	   if [[ ! "${aResult[*]}" =~ "${value}" ]]; then
+	   qtddezenas=$(( $(len "$(alltrim "$value")") /2 ))
+	   if [[ ! "${aResult[*]}" =~ $value ]]; then
 			printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${green} OK ↑ não encontrado no BD${reset}\n" "$n" $qtddezenas "$value"
 	   else
 			printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${red} FALHA ↓ foi encontrado no BD${reset}\n" "$n" $qtddezenas "$value"
@@ -693,7 +695,7 @@ choosefile()
    while true
    do
    	pushd "$CPATH" &>/dev/null || exit
-      ARRAY_FILE_LOG=($(find *.log -type f 2>/dev/null))
+      ARRAY_FILE_LOG=($(find -- *.log -type f 2>/dev/null))
       popd &>/dev/null || exit
      	[[ "${#ARRAY_FILE_LOG[@]}" -eq 0 ]] && die "ERRO: arquivo log de jogos ainda não existe. Faça alguns jogos primeiro. (use -h for help)"
       local array=()
@@ -773,9 +775,9 @@ ${orange}uso:${reset}
    sena ${red}-j 5 15${cyan}             # jogar 05 palpites com 15 (max) dezenas${reset}
    sena ${red}-h${green} |${red}--help${cyan}          # este help${reset}
    sena ${red}-c${green} |${red}--compare${cyan}       # comparar palpites com o BD${reset}
-   sena ${red}-gl${green}|${red}--glog${cyan}          # exibir log de palpites efetuados - (exibiçao com whiptail)${reset}
-   sena ${red}-l${green} |${red}--log${cyan}           # exibir log de palpites efetuados - (exibição com dialog - default)${reset}
-   sena ${red}-lg${green}|${red}--logl${cyan}          # exibir log de palpites efetuados - (exibição com dialog sem bordas)${reset}
+   sena ${red}-l${green} |${red}--log${cyan}           # exibir log de palpites efetuados - (exibição com dialog sem bordas - default)${reset}
+   sena ${red}-lw${green}|${red}--logw${cyan}          # exibir log de palpites efetuados - (exibiçao com whiptail)${reset}
+   sena ${red}-ld${green}|${red}--logd${cyan}          # exibir log de palpites efetuados - (exibição com dialog com bordas)${reset}
    sena ${red}-U${green} |${red}--update${cyan}        # atualizar BD com a CAIXA${reset}
    sena ${red}-F${green} |${red}--force${cyan}         # força a atualização do zero do BD com a CAIXA${reset}
    sena ${red}-V${green} |${red}--version${cyan}       # exibe versão do aplicativo${reset}
@@ -814,18 +816,22 @@ init()
       case "${1}" in
 		   -h|-H|--help) sh_usage; exit $(( $# ? 0 : 1 ));;
    		-c|-C|--compare) sh_compare; exit $(( $# ? 0 : 1 ));;
-   		-l|-L|--log) choosefile; exit $(( $# ? 0 : 1 ));;
    		-U|--update) sh_update; exit $(( $# ? 0 : 1 ));;
    		-f|-F|--force) force=$true; sh_update; exit $(( $# ? 0 : 1 ));;
    		-V|--version) sh_logo; exit $(( $# ? 0 : 1 ));;
-   		-gl|--glog)
+   		-l|-L|--log)
+				FULLDIALOG=$true
+   			DIALOG="dialog --no-lines"
+   			choosefile; exit $(( $# ? 0 : 1 ))
+   			;;
+   		-lw|--logw)
 				FULLDIALOG=$false
    			DIALOG="whiptail"
    			choosefile; exit $(( $# ? 0 : 1 ))
    			;;
-   		-lg|--logl)
+   		-ld|--logd)
 				FULLDIALOG=$true
-   			DIALOG="dialog --no-lines"
+   			DIALOG="dialog"
    			choosefile; exit $(( $# ? 0 : 1 ))
    			;;
    		-j|-J|--jogo)
