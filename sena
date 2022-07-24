@@ -292,8 +292,9 @@ sh_checknet()
 }
 
 setvarcolors(){
-   if tput setaf 1 &> /dev/null; then
-		#tput setaf 127 | cat -v  #capturar saida
+   # does the terminal support true-color?
+   if [[ $(tput colors) -eq 256 ]]; then
+      #tput setaf 127 | cat -v  #capturar saida
       tput sgr0; # reset colors
       bold=$(tput bold);
       reset=$(tput sgr0);
@@ -308,6 +309,8 @@ setvarcolors(){
       orange=$(tput setaf 3);
 #     purple=$(tput setaf 125);
 #     violet=$(tput setaf 61);
+
+   # doesn't support true-color
    else
       bold='';
       reset="\e[0m";
