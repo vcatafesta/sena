@@ -2,7 +2,7 @@
 #  sena - aplicativo para gerar numeros aleatorios da sena
 #
 #  Created: 2022/02/15
-#  Altered: 2022/07/14
+#  Altered: 2022/07/24
 #
 #  Copyright (c) 2022-2022, Benedito Ramos <diramos@uol.com.br>
 #  Copyright (c) 2022-2022, Vilmar Catafesta <vcatafesta@gmail.com>
@@ -30,8 +30,8 @@
 #global
 
 #system
-_VERSION_='2.56.20220714'
-DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog whiptail find jq)
+_VERSION_='2.57.20220724'
+DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find jq)
 
 #paths/files/urls
 CPATH=/opt/sena
