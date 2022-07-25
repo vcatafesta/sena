@@ -27,10 +27,12 @@
 #     awk, bsdtar (libarchive), bzip2, coreutils, fakeroot, file, find (findutils),
 #     gettext, gpg, grep, gzip, sed, tput (ncurses), xz, etc
 #########################################################################
-#global
+# debug with PS4
+#export PS4='${0##*/}[$LINENO] '
+#set -x
 
 #system
-_VERSION_='2.57.20220724'
+_VERSION_='2.58.20220724'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find jq)
 
 #paths/files/urls
@@ -291,7 +293,8 @@ sh_checknet()
    return $?
 }
 
-setvarcolors(){
+setvarcolors()
+{
    # does the terminal support true-color?
    if [[ $(tput colors) -eq 256 ]]; then
       #tput setaf 127 | cat -v  #capturar saida
@@ -318,13 +321,13 @@ setvarcolors(){
       cyan="\e[1;36m";
       green="\e[1;32m";
       orange="\e[1;33m";
-#     purple="\e[1;35m";
       red="\e[1;31m";
-#     violet="\e[1;35m";
       white="\e[1;37m";
       yellow="\e[1;33m";
       pink="\033[35;1m";
 #     black="\e[1;30m";
+#     purple="\e[1;35m";
+#     violet="\e[1;35m";
    fi
 }
 
@@ -332,17 +335,17 @@ unsetvarcolors()
 {
    bold=
    reset=
-#  black=
    blue=
    cyan=
    green=
    orange=
-#   purple=
    red=
-#  violet=
    white=
    yellow=
    pink=
+#  black=
+#	purple=
+#	violet=
 }
 
 log_prefix()
