@@ -810,6 +810,7 @@ ${orange}uso:${reset}
    sena ${red}-U${green} |${red}--update${cyan}        # atualizar BD com a CAIXA${reset}
    sena ${red}-F${green} |${red}--force${cyan}         # força a atualização do zero do BD com a CAIXA${reset}
    sena ${red}-V${green} |${red}--version${cyan}       # exibe versão do aplicativo${reset}
+   sena ${red}  ${green} |${red}--ncolor${cyan}        # remove cores da saída (use como primeiro parâmetro - ex: sena --nocolor -j 10)
 EOF
 }
 
@@ -872,6 +873,9 @@ init()
 	  			fi
  				sh_playsena "$@"
  				exit $(( $# ? 0 : 1 ))
+ 				;;
+   		--nocolor)
+   			unsetvarcolors
  				;;
          *)  die "operação não suportada: $1 (use -h for help)";;
       esac
