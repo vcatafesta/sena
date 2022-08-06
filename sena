@@ -267,7 +267,7 @@ die()
 msg()
 {
 	local msg=$1; shift
-	printf '%s\n' "$(DOT)${bold}${green}$msg${reset}" >&2
+	printf '%s\n' "$(DOT)${bold}${green}$msg${reset}"
 	return
 }
 
