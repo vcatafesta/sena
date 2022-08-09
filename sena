@@ -32,7 +32,7 @@
 #set -x
 
 #system
-_VERSION_='2.60.20220806'
+_VERSION_='2.61.20220806'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find jq)
 
 #paths/files/urls
@@ -127,8 +127,9 @@ comment
 	if [[ -e $filejogos ]]; then
 		cfiledatahora=$(sh_filedatetime "$filejogos")
 		njogos=$(sh_linecount "$filejogos")
-		msg "Existe arquivo de: ${yellow}$cfiledatahora${reset} com ${bold}${red}($njogos)${reset} palpites. \
-		${red}Poderá examina-lo com a opção -l ${cyan}↑↑ Gerando novos palpites ↑↑"
+		msg "Existe arquivo de: ${yellow}$cfiledatahora${reset} com ${bold}${red}($njogos)${reset} palpites."
+		msg "Poderá examina-lo com a opção -l"
+		msg "${cyan}↑↑ Gerando novos palpites ↑↑"
 		sleep 1
 	fi
 	test ! -e "$fileresult" && :>| "$fileresult"
@@ -205,6 +206,7 @@ comment
 	cp "$filetmp" "$filejogos"
 	rm "$filetmp" 2> /dev/null
 
+   replicate '#' 100
 	msg "Resumo:"
 	msg "                    Palpites aceitos : ${white}$n"
 	msg "Palpites descartados existindo no BD : ${red}$nDescartadosNoBD"
@@ -248,6 +250,15 @@ sh_val()
 	else
 		echo "U"
 	fi
+}
+
+maxcol()
+{
+   if [ -z "${COLUMNS}" ]; then
+      COLUMNS=$(stty size)
+      COLUMNS=${COLUMNS##* }
+   fi
+   printf $COLUMNS
 }
 
 replicate()
