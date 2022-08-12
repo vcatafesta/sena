@@ -32,7 +32,7 @@
 #set -x
 
 #system
-_VERSION_='2.62.20220812'
+_VERSION_='2.63.20220812'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find jq)
 
 #paths/files/urls
@@ -294,11 +294,11 @@ sh_checknet()
 {
 	xurl="$1"
    # have internet?
-   log_info_msg "Testing internet from ${xurl}"
+   log_info_msg "Testando internet em ${xurl}"
  	curl --insecure "$xurl" >/dev/null 2>&1 ||
    {
 	   evaluate_retval "$?"
-	   log_msg "No route to server ($xurl) - Rodando com BD sem atualizar."
+	   log_msg "Sem rota para o servidor ($xurl) - Rodando com BD sem atualizar."
 	   return 1
    }
    evaluate_retval "$?"
