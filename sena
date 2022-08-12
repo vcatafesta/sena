@@ -2,7 +2,7 @@
 #  sena - aplicativo para gerar numeros aleatorios da sena
 #
 #  Created: 2022/02/15
-#  Altered: 2022/08/06
+#  Altered: 2022/08/12
 #
 #  Copyright (c) 2022-2022, Benedito Ramos <diramos@uol.com.br>
 #  Copyright (c) 2022-2022, Vilmar Catafesta <vcatafesta@gmail.com>
@@ -32,7 +32,7 @@
 #set -x
 
 #system
-_VERSION_='2.61.20220806'
+_VERSION_='2.62.20220812'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find jq)
 
 #paths/files/urls
@@ -272,7 +272,8 @@ die()
 {
 	local msg=$1; shift
 	printf '%s\n' "$(DOT)${bold}${red}$msg${reset}" >&2
-	exit 1
+#	exit 1
+	return
 }
 
 msg()
@@ -833,7 +834,7 @@ ${orange}uso:${reset}
    sena ${red}-U${green} |${red}--update${cyan}        # atualizar BD com a CAIXA${reset}
    sena ${red}-F${green} |${red}--force${cyan}         # força a atualização do zero do BD com a CAIXA${reset}
    sena ${red}-V${green} |${red}--version${cyan}       # exibe versão do aplicativo${reset}
-   sena ${red}  ${green} |${red}--ncolor${cyan}        # remove cores da saída (use como primeiro parâmetro - ex: sena --nocolor -j 10)
+   sena ${red}  ${green} |${red}--nocolor${cyan}       # remove cores da saída (use como primeiro parâmetro - ex: sena --nocolor -j 10)
 EOF
 }
 
