@@ -2,7 +2,7 @@
 #  sena - aplicativo para gerar numeros aleatorios da sena
 #
 #  Created: 2022/02/15
-#  Altered: 2022/08/12
+#  Altered: 2022/08/13
 #
 #  Copyright (c) 2022-2022, Benedito Ramos <diramos@uol.com.br>
 #  Copyright (c) 2022-2022, Vilmar Catafesta <vcatafesta@gmail.com>
@@ -32,7 +32,7 @@
 #set -x
 
 #system
-_VERSION_='2.63.20220812'
+_VERSION_='2.70.20220813'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find jq)
 
 #paths/files/urls
@@ -54,6 +54,8 @@ sep='\xe2\x94\x82'
 # flag boolean
 true=1
 false=0
+quiet=0
+resume=0
 
 # flag dialog exit status codes
 : "${DIALOG="dialog"}"
@@ -134,7 +136,7 @@ comment
 	fi
 	test ! -e "$fileresult" && :>| "$fileresult"
 	[[ $(sh_filesize "$fileresult") -eq 0 ]] && \
-		log_warning_msg "AVISO: necessário atualizar o BD. Prosseguindo..."
+		msg "AVISO: necessário atualizar o BD. Prosseguindo..."
 	sh_update
 
 	declare -i resto=$(( qtddezenas % 2 ))
@@ -192,8 +194,11 @@ comment
 		fi
 
 		((n++))
-		printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: \
-			$pink%s${green}-> foi aceito${reset}\n" "$n" "$qtddezenas" "$line"
+		if (( resume )); then
+			printf "$pink%s${green}${reset}\n" "$line"
+		else
+			printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${green}-> foi aceito${reset}\n" "$n" "$qtddezenas" "$line"
+		fi
 		echo "$line" >> "$filejogos"
 		echo "$cnow $var $line" >> "$filejogosformatado"
 		echo "$cnow $var $line -> foi aceito" >> "$filelog"
@@ -206,12 +211,16 @@ comment
 	cp "$filetmp" "$filejogos"
 	rm "$filetmp" 2> /dev/null
 
-   replicate '#' 100
-	msg "Resumo:"
-	msg "                    Palpites aceitos : ${white}$n"
-	msg "Palpites descartados existindo no BD : ${red}$nDescartadosNoBD"
-	msg "Palpites descartados por duplicidade : ${red}$nDescartadosDuplicidade"
-	msg "Caso ganhar, considere fazer alguma doação para os desenvolvedores deste software :)"
+	if ! (( quiet )); then
+	   replicate '#' 100
+	fi
+	if ! (( resume )); then
+		msgout "Resumo:"
+		msgout "                    Palpites aceitos : ${white}$n"
+		msgout "Palpites descartados existindo no BD : ${red}$nDescartadosNoBD"
+		msgout "Palpites descartados por duplicidade : ${red}$nDescartadosDuplicidade"
+		msgout "Caso ganhar, considere fazer alguma doação para os desenvolvedores deste software :)"
+	fi
 }
 
 sh_filedatetimestat(){ stat -c %w "$1"; }
@@ -277,6 +286,15 @@ die()
 }
 
 msg()
+{
+	if ! (( quiet )); then
+		local msg=$1; shift
+		printf '%s\n' "$(DOT)${bold}${green}$msg${reset}"
+	fi
+	return
+}
+
+msgout()
 {
 	local msg=$1; shift
 	printf '%s\n' "$(DOT)${bold}${green}$msg${reset}"
@@ -370,6 +388,8 @@ unsetvarcolors()
    SUCCESS_SUFFIX=
    WAIT_PREFIX=
    WAIT_SUFFIX=
+   WARNING_PREFIX=
+	WARNING_SUFFIX=
 }
 
 log_prefix()
@@ -413,49 +433,63 @@ evaluate_retval()
 
 log_failure_msg2()
 {
-   echo -n -e "${BMPREFIX}${*}"
-   echo -e "${CURS_ZERO}${FAILURE_PREFIX}${SET_COL}${FAILURE_SUFFIX}"
+	if ! (( quiet )); then
+	   echo -n -e "${BMPREFIX}${*}"
+	   echo -e "${CURS_ZERO}${FAILURE_PREFIX}${SET_COL}${FAILURE_SUFFIX}"
+	fi
    return 0
 }
 
 log_success_msg()
 {
-	echo -n -e "${BMPREFIX}${*}"
-	echo -e "${CURS_ZERO}${SUCCESS_PREFIX}${SET_COL}${SUCCESS_SUFFIX}"
+	if ! (( quiet )); then
+		echo -n -e "${BMPREFIX}${*}"
+		echo -e "${CURS_ZERO}${SUCCESS_PREFIX}${SET_COL}${SUCCESS_SUFFIX}"
+	fi
 	return 0
 }
 
 log_success_msg2()
 {
-   echo -n -e "${BMPREFIX}${*}"
-   echo -n -e "${CURS_ZERO}${SUCCESS_PREFIX}${SET_COL}${SUCCESS_SUFFIX}\n"
+	if ! (( quiet )); then
+	   echo -n -e "${BMPREFIX}${*}"
+	   echo -n -e "${CURS_ZERO}${SUCCESS_PREFIX}${SET_COL}${SUCCESS_SUFFIX}\n"
+	fi
    return 0
 }
 
 log_warning_msg()
 {
-   echo -n -e "${BMPREFIX}${*}"
-   echo -n -e "${CURS_ZERO}${WARNING_PREFIX}${SET_COL}${WARNING_SUFFIX}"
+	if ! (( quiet )); then
+	   echo -n -e "${BMPREFIX}${*}"
+   	echo -n -e "${CURS_ZERO}${WARNING_PREFIX}${SET_COL}${WARNING_SUFFIX}"
+	fi
    return 0
 }
 
 
 log_wait_msg()
 {
-   echo -n -e "${BMPREFIX}${*}"
-   echo -e "${CURS_ZERO}${WAIT_PREFIX}${SET_COL}${WAIT_SUFFIX}"
+	if ! (( quiet )); then
+	   echo -n -e "${BMPREFIX}${*}"
+	   echo -e "${CURS_ZERO}${WAIT_PREFIX}${SET_COL}${WAIT_SUFFIX}"
+	fi
    return 0
 }
 
 log_info_msg()
 {
-   echo -n -e "${BMPREFIX}${*}"
+	if ! (( quiet )); then
+	   echo -n -e "${BMPREFIX}${*}"
+	fi
    return 0
 }
 
 log_msg()
 {
-	echo -n -e "${DOTPREFIX}${*}"
+	if ! (( quiet )); then
+		echo -n -e "${DOTPREFIX}${*}"
+	fi
 	return 0
 }
 
@@ -822,19 +856,21 @@ sh_usage()
 	cat <<EOF
 ${white}sena v$_VERSION_${reset}
 ${orange}uso:${reset}
-   sena ${red}-j 3${cyan}                # jogar 03 palpites (padrão 6 dezenas)${reset}
-   sena ${red}-j 10${cyan}               # jogar 10 palpites (padrão 6 dezenas)${reset}
-   sena ${red}-j 10 6${cyan}             # jogar 10 palpites com 06 (min) dezenas${reset}
-   sena ${red}-j 5 15${cyan}             # jogar 05 palpites com 15 (max) dezenas${reset}
-   sena ${red}-h${green} |${red}--help${cyan}          # este help${reset}
-   sena ${red}-c${green} |${red}--compare${cyan}       # comparar palpites com o BD${reset}
-   sena ${red}-l${green} |${red}--log${cyan}           # exibir log de palpites efetuados - (exibição com dialog sem bordas - default)${reset}
-   sena ${red}-lw${green}|${red}--logw${cyan}          # exibir log de palpites efetuados - (exibiçao com whiptail)${reset}
-   sena ${red}-ld${green}|${red}--logd${cyan}          # exibir log de palpites efetuados - (exibição com dialog com bordas)${reset}
-   sena ${red}-U${green} |${red}--update${cyan}        # atualizar BD com a CAIXA${reset}
-   sena ${red}-F${green} |${red}--force${cyan}         # força a atualização do zero do BD com a CAIXA${reset}
-   sena ${red}-V${green} |${red}--version${cyan}       # exibe versão do aplicativo${reset}
-   sena ${red}  ${green} |${red}--nocolor${cyan}       # remove cores da saída (use como primeiro parâmetro - ex: sena --nocolor -j 10)
+   ${reset}sena ${red}-j 3${cyan}                # jogar 03 palpites (padrão 6 dezenas)${reset}
+   ${reset}sena ${red}-j 10${cyan}               # jogar 10 palpites (padrão 6 dezenas)${reset}
+   ${reset}sena ${red}-j 10 6${cyan}             # jogar 10 palpites com 06 (min) dezenas${reset}
+   ${reset}sena ${red}-j 5 15${cyan}             # jogar 05 palpites com 15 (max) dezenas${reset}
+   ${reset}sena ${red}-h${green} |${red}--help${cyan}          # este help${reset}
+   ${reset}sena ${red}-c${green} |${red}--compare${cyan}       # comparar palpites com o BD${reset}
+   ${reset}sena ${red}-l${green} |${red}--log${cyan}           # exibir log de palpites efetuados - (exibição com dialog sem bordas - default)${reset}
+   ${reset}sena ${red}-lw${green}|${red}--logw${cyan}          # exibir log de palpites efetuados - (exibiçao com whiptail)${reset}
+   ${reset}sena ${red}-ld${green}|${red}--logd${cyan}          # exibir log de palpites efetuados - (exibição com dialog com bordas)${reset}
+   ${reset}sena ${red}-U${green} |${red}--update${cyan}        # atualizar BD com a CAIXA${reset}
+   ${reset}sena ${red}-F${green} |${red}--force${cyan}         # força a atualização do zero do BD com a CAIXA${reset}
+   ${reset}sena ${red}-V${green} |${red}--version${cyan}       # exibe versão do aplicativo${reset}
+   ${reset}sena ${red}-s${green} |${red}--resume${cyan}        # mostra somente resultado
+   ${reset}sena ${red}-q${green} |${red}--quiet${cyan}         # saida resumida
+   ${reset}sena ${red}  ${green} |${red}--nocolor${cyan}       # remove cores da saída (use como primeiro parâmetro - ex: sena --nocolor -j 10)
 EOF
 }
 
@@ -900,6 +936,13 @@ init()
  				;;
    		--nocolor)
    			unsetvarcolors
+ 				;;
+   		-q|--quiet)
+   			quiet=$true
+				;;
+   		-s|--resume)
+   			quiet=$true
+				resume=$true
  				;;
          *)  die "operação não suportada: $1 (use -h for help)";;
       esac
