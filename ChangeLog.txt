@@ -1,3 +1,4 @@
+
 2023-03-17 ter 15:42:51 -04 Vilmar Catafesta <vcatafesta@gmail.com>
 + resultadosena.txt
 + ChangeLog.txt

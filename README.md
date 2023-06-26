@@ -3,8 +3,8 @@
 ## Instalação:
 
 - 1 - usando git
-	- git clone https://github.com/vcatafesta/sena
-	- git clone https://codeberg.org/vcatafesta/sena
+	- git clone --depth=1 https://github.com/vcatafesta/sena
+	- git clone --depth=1 https://codeberg.org/vcatafesta/sena
 
 - 2 - usando wget
 	- wget https://github.com/vcatafesta/sena/raw/main/sena
