@@ -17,7 +17,7 @@ install:
 	@mkdir -p ${INFODIR}
 	@install -d -m 1777 ${BINDIR}
 	@install -m 4755 sena ${BINDIR}/sena
-	@install -m ${MODE} resultadosena.txt ${BINDIR}/resultadosena.txt
+	@install -m ${MODE} resultadosena.dat ${BINDIR}/resultadosena.dat
 	@mkdir -p ${INFODIR}
 	@cp Makefile ChangeLog INSTALL LICENSE MAINTAINERS README.md ${DOCDIR}/
 	@cp Makefile ChangeLog INSTALL LICENSE MAINTAINERS README.md ${INFODIR}/
@@ -30,7 +30,7 @@ install:
 	@echo
 uninstall:
 	@rm ${BINDIR}/sena
-	@rm ${BINDIR}/resultadosena.txt
+	@rm ${BINDIR}/resultadosena.dat
 	@rm -fd ${BINDIR}
 	@rm -fd ${INFODIR}
 	@echo "Sena for Linux foi removido."
