@@ -64,7 +64,7 @@ package() {
 	install -Dm755 "${srcdir}/$pkgname" "${pkgdir}/opt/$pkgname/$pkgname"
 	install -Dm755 "${srcdir}/resultadosena.dat" "${pkgdir}/opt/$pkgname/resultadosena.dat"
 	install -d "${pkgdir}/opt/$pkgname/doc"
-	install -Dm644 "${srcdir}/INSTALL.txt" "${pkgdir}/opt/$pkgname/doc/INSTALL.txt"
+	install -Dm644 "${srcdir}/INSTALL" "${pkgdir}/opt/$pkgname/doc/INSTALL"
 
 	# Install license file if present
 	if [ -f "LICENSE" ]; then
