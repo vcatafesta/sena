@@ -2,11 +2,15 @@
 
 ## Instalação:
 
-- 1 - usando git
+- 1 - usando wget/curl + makepkg
+	- wget -O PKGBUILD https://raw.githubusercontent.com/vcatafesta/sena/main/pkgbuild/PKGBUILD && makepkg -si
+	- curl -o PKGBUILD https://raw.githubusercontent.com/vcatafesta/sena/main/pkgbuild/PKGBUILD && makepkg -si
+
+- 2 - usando git
 	- git clone --depth=1 https://github.com/vcatafesta/sena
 	- git clone --depth=1 https://codeberg.org/vcatafesta/sena
 
-- 2 - usando wget
+- 3 - usando wget
 	- wget https://github.com/vcatafesta/sena/raw/main/sena
 	- wget https://github.com/vcatafesta/sena/raw/main/resultadosena.dat
 	- wget https://github.com/vcatafesta/sena/raw/main/Makefile
