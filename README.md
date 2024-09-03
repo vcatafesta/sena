@@ -2,7 +2,7 @@
 
 ## Instalação:
 
-- 1 - usando wget/curl + makepkg
+- 1 - usando wget/curl + makepkg (Arch like)
 	- wget -O PKGBUILD https://raw.githubusercontent.com/vcatafesta/sena/main/pkgbuild/PKGBUILD && makepkg -si
 	- curl -o PKGBUILD https://raw.githubusercontent.com/vcatafesta/sena/main/pkgbuild/PKGBUILD && makepkg -si
 
