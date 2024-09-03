@@ -2,9 +2,9 @@
 #  sena - aplicativo para gerar numeros aleatorios da sena
 #
 #  Created: 2022/02/15
-#  Altered: 2022/11/25
+#  Altered: ter 03 set 2024 13:18:55 -04
 #
-#  Copyright (c) 2022-2023, Vilmar Catafesta <vcatafesta@gmail.com>
+#  Copyright (c) 2022-2024, Vilmar Catafesta <vcatafesta@gmail.com>
 #  Copyright (c) 2022-2022, fgusta <https://github.com/0x6775737461>
 #  Copyright (c) 2022-2022, Benedito Ramos <diramos@uol.com.br>
 #
@@ -32,7 +32,7 @@
 #set -x
 
 #system
-_VERSION_='2.71.20221125'
+_VERSION_='2.72.20240903'
 DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find jq)
 
 #paths/files/urls
@@ -40,11 +40,11 @@ CPATH=/opt/sena
 CPATH=$PWD
 filejogos="$CPATH/jogos.txt"
 filejogosformatado="$CPATH/jogosformatado.txt"
-fileresult="$CPATH/resultadosena.txt"
+fileresult="$CPATH/resultadosena.dat"
 fileUltSorteio='/tmp/UltSorteio.txt'
 fileUltSorteioAtualizado='/tmp/UltSorteioAtualizado.txt'
 SITE='https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/'
-URL_GITHUB_RESULTADOSENA='https://github.com/vcatafesta/sena/raw/main/resultadosena.txt'
+URL_GITHUB_RESULTADOSENA='https://github.com/vcatafesta/sena/raw/main/resultadosena.dat'
 
 #conf adicionais
 IFS=$' \t\n'
@@ -155,7 +155,7 @@ comment
 	fi
 	: >|"$filelog"
 
-	((resto > 0)) && ((metadeqtddezenas++))
+	((resto > 0)) && ((++metadeqtddezenas))
 
 	log_wait_msg "Processando ${red}($qtdjogos)${reset} palpites, aguarde..."
 	while ((n < qtdjogos)); do
@@ -169,7 +169,7 @@ comment
 		line="$jogos1a30 $jogos31a60"
 		cnow=$(sh_datetime)
 
-		((njogosregistrados++))
+		((++njogosregistrados))
 		((njogosregistrados < 10)) &&
 			var="Jogo 0$njogosregistrados: " ||
 			var="Jogo $njogosregistrados: "
@@ -179,7 +179,7 @@ comment
 				printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: \
 	  			$pink%s${red}-> foi descartado, já existe no BD!${reset}\n" "$n" "$qtddezenas" "$line"
 				echo "$cnow $var $line -> foi descartado, já existe no BD!" >>"$filelog"
-				((nDescartadosNoBD++))
+				((++nDescartadosNoBD))
 				continue
 			fi
 		fi
@@ -188,11 +188,11 @@ comment
 			printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: \
   			$pink%s${red}-> foi descartado, já existe no jogo atual!${reset}\n" "$n" "$qtddezenas" "$line"
 			echo "$cnow $var $line -> foi descartado, já existe no jogo atual!" >>"$filelog"
-			((nDescartadosDuplicidade++))
+			((++nDescartadosDuplicidade))
 			continue
 		fi
 
-		((n++))
+		((++n))
 		if ((resume)); then
 			printf "$pink%s${green}${reset}\n" "$line"
 		else
@@ -544,7 +544,7 @@ vilmar
 		else
 			printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${red} FALHA ↓ foi encontrado no BD${reset}\n" "$n" $qtddezenas "$value"
 		fi
-		((n++))
+		((++n))
 	done
 	IFS=$SAVEIFS
 }
@@ -662,7 +662,7 @@ sh_checkresultadosfaltantes() {
 		if ! ((n)); then
 			msg "Atualizando Banco de Dados. Aguarde..."
 		fi
-		((n++))
+		((++n))
 		sh_atualizaBD "$value"
 	done
 }
@@ -761,7 +761,7 @@ choosefile() {
 		for i in "${ARRAY_FILE_LOG[@]}"; do
 			array[((n++))]="$i"
 			array[((n++))]=$(printf "%-6s$sep%5s PALPITES" "$(date -r "$i" +"%d/%m/%Y %T")" "$(sh_linecount "$i")")
-			((nc++))
+			((++nc))
 		done
 
 		#		          --ascii-lines													               \
