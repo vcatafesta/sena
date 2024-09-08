@@ -69,9 +69,9 @@ package() {
 		user_home="$HOME"
 	fi
 
-	# Cria o diretório no home do usuário que invocou o sudo
-	mkdir -p "${user_home}/$pkgname"
-	echo "Diretório $pkgname criado em ${user_home}"
+#	# Cria o diretório no home do usuário que invocou o sudo
+#	mkdir -p "${user_home}/$pkgname"
+#	echo "Diretório $pkgname criado em ${user_home}"
 
 	install -d -m1777 "${pkgdir}/opt/$pkgname"
 	install -Dm755 "${srcdir}/$pkgname"          "${pkgdir}/opt/$pkgname/$pkgname"
@@ -79,7 +79,7 @@ package() {
  # Criar o script wrapper em /usr/bin
   install -d "${pkgdir}/usr/bin"
   cat <<EOF > "${pkgdir}/usr/bin/$pkgname"
-#!/usr/bin/enva bash
+#!/usr/bin/env bash
 # script wrapper para /opt/sena/sena
 # Copyright (c) Vilmar Catafesta, 2024 <vcatafesta@gmail.com>
 
