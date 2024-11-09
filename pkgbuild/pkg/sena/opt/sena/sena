@@ -1,0 +1,948 @@
+#!/usr/bin/env bash
+#  sena - aplicativo para gerar numeros aleatorios da sena
+#
+#  Created: 2022/02/15
+#  Altered: ter 03 set 2024 13:18:55 -04
+#
+#  Copyright (c) 2022-2024, Vilmar Catafesta <vcatafesta@gmail.com>
+#  Copyright (c) 2022-2022, fgusta <https://github.com/0x6775737461>
+#  Copyright (c) 2022-2022, Benedito Ramos <diramos@uol.com.br>
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+#  sena uses quite a few external programs during its execution. You
+#  need to have at least the following installed for makepkg to function:
+#     awk, bsdtar (libarchive), bzip2, coreutils, fakeroot, file, find (findutils),
+#     gettext, gpg, grep, gzip, sed, tput (ncurses), xz, etc
+#########################################################################
+# debug
+#export PS4=$'${red}${0##*/}${cyan}[$LINENO]${reset} '
+#set -x
+
+#system
+_VERSION_='2.72.20240903'
+DEPENDENCIES=(curl wget grep printf mktemp sort sed awk tail cat tput stat dialog find jq)
+
+#paths/files/urls
+CPATH=/opt/sena
+CPATH=$PWD
+filejogos="$CPATH/jogos.txt"
+filejogosformatado="$CPATH/jogosformatado.txt"
+fileresult="$CPATH/resultadosena.dat"
+fileUltSorteio='/tmp/UltSorteio.txt'
+fileUltSorteioAtualizado='/tmp/UltSorteioAtualizado.txt'
+SITE='https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/'
+URL_GITHUB_RESULTADOSENA='https://github.com/vcatafesta/sena/raw/main/resultadosena.dat'
+
+#conf adicionais
+IFS=$' \t\n'
+SAVEIFS=$IFS
+sep='\xe2\x94\x82'
+
+# flag boolean
+true=1
+false=0
+quiet=0
+resume=0
+
+# flag dialog exit status codes
+: "${DIALOG="dialog"}"
+: "${D_OK=0}"
+: "${D_CANCEL=1}"
+: "${D_HELP=2}"
+: "${D_EXTRA=3}"
+: "${D_ITEM_HELP=4}"
+: "${D_ESC=255}"
+
+if [ "${DIALOG}" == 'dialog' ]; then
+	FULLDIALOG=$true
+else
+	FULLDIALOG=$false
+fi
+
+if [ -z "${COLUMNS}" ]; then
+	COLUMNS=$(stty size)
+	COLUMNS=${COLUMNS##* }
+fi
+if [ "${COLUMNS}" = "0" ]; then
+	COLUMNS=80
+fi
+
+COL=$((COLUMNS - 8))
+#WCOL=$(( COL - 2 ))
+SET_COL="\\033[${COL}G" # at the $COL char
+#SET_WCOL="\\033[${WCOL}G"    # at the $WCOL char
+#CURS_UP="\\033[1A\\033[0G"   # Up one line, at the 0'th char
+CURS_ZERO="\\033[0G"
+
+[ -e "/chili/core.sh" ] && source "/chili/core.sh"
+
+sh_playsena() {
+	local filelog
+	local cnow
+	local LCONF=1
+	declare -i qtddezenas
+	declare -i qtdjogos=$1
+	declare -i nDescartadosNoBD=0
+	declare -i nDescartadosDuplicidade=0
+
+	(($# > 2)) && die "ERRO: parâmetros em excesso. (use -h for help)"
+	(($# == 2)) && qtddezenas=$2 || qtddezenas=6
+	((qtdjogos < 1)) && die "ERRO: mínimo de 1 jogo brother! (use -h for help)"
+	((qtddezenas > 15)) && die "ERRO: máximo de dezenas jogadas é: 15. (use -h for help)"
+	((qtddezenas < 6)) && die "ERRO: mínimo de dezenas jogadas é: 6. (use -h for help)"
+	((qtddezenas > 15)) && qtddezenas=15
+	((qtddezenas < 6)) && qtddezenas=6
+
+	: <<'comment'
+	if [[ -e $filejogos ]]; then
+		cfiledatahora=$(sh_filedatetime "$filejogos")
+		njogos=$(sh_linecount "$filejogos")
+		sh_conf "$(DOT)Existe arquivo de jogos gerado em: \
+			${yellow}$cfiledatahora${reset} com ${bold}${red}($njogos)${reset} palpites. \
+			Deseja substitui-lo?"
+   	LCONF=$?
+
+	   if ! (( LCONF )); then
+			msg "1 - Detalhes do arquivo de palpites"
+			echo -n "$bold$cyan"; stat "$filejogos"; echo -n "$reset"
+			msg "2 - Exibindo os ultimos palpites feito"
+			echo -n "$yellow"; cat "$filejogos"; echo -n "$reset"
+			exit
+	   fi
+   fi
+comment
+
+	if [[ -e $filejogos ]]; then
+		cfiledatahora=$(sh_filedatetime "$filejogos")
+		njogos=$(sh_linecount "$filejogos")
+		msg "Existe arquivo de: ${yellow}$cfiledatahora${reset} com ${bold}${red}($njogos)${reset} palpites."
+		msg "Poderá examina-lo com a opção -l"
+		msg "${cyan}↑↑ Gerando novos palpites ↑↑"
+		sleep 1
+	fi
+	test ! -e "$fileresult" && : >|"$fileresult"
+	[[ $(sh_filesize "$fileresult") -eq 0 ]] &&
+		msg "AVISO: necessário atualizar o BD. Prosseguindo..."
+	sh_update
+
+	declare -i resto=$((qtddezenas % 2))
+	declare -i metadeqtddezenas=$((qtddezenas / 2))
+	declare -i outrametade="$metadeqtddezenas"
+	declare -i n=0
+	declare -i njogosregistrados=0
+
+	filelog=$(date +"%d%m%Y-%T")
+	# param expansion to remove the colon
+	filelog="${filelog//:/}.log"
+
+	if ((LCONF)); then
+		: >|"$filejogos"
+	else
+		njogosregistrados=$(sh_linecount "$filejogosformatado")
+	fi
+	: >|"$filelog"
+
+	((resto > 0)) && ((++metadeqtddezenas))
+
+	log_wait_msg "Processando ${red}($qtdjogos)${reset} palpites, aguarde..."
+	while ((n < qtdjogos)); do
+		jogos1a30="$(shuf -e {01..30} -n "$metadeqtddezenas" | sort -n)"
+		jogos31a60="$(shuf -e {31..60} -n "$outrametade" | sort -n)"
+
+		# removing '\n'
+		jogos1a30="${jogos1a30//$'\n'/ }"
+		jogos31a60="${jogos31a60//$'\n'/ }"
+
+		line="$jogos1a30 $jogos31a60"
+		cnow=$(sh_datetime)
+
+		((++njogosregistrados))
+		((njogosregistrados < 10)) &&
+			var="Jogo 0$njogosregistrados: " ||
+			var="Jogo $njogosregistrados: "
+
+		if [[ qtddezenas -eq 6 ]]; then
+			if grep -q -o "$line" "$fileresult"; then # jogo existe no BD? descarta!
+				printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: \
+	  			$pink%s${red}-> foi descartado, já existe no BD!${reset}\n" "$n" "$qtddezenas" "$line"
+				echo "$cnow $var $line -> foi descartado, já existe no BD!" >>"$filelog"
+				((++nDescartadosNoBD))
+				continue
+			fi
+		fi
+
+		if grep -q -o "$line" "$filejogos"; then # jogo existe? descarta!
+			printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: \
+  			$pink%s${red}-> foi descartado, já existe no jogo atual!${reset}\n" "$n" "$qtddezenas" "$line"
+			echo "$cnow $var $line -> foi descartado, já existe no jogo atual!" >>"$filelog"
+			((++nDescartadosDuplicidade))
+			continue
+		fi
+
+		((++n))
+		if ((resume)); then
+			printf "$pink%s${green}${reset}\n" "$line"
+		else
+			printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${green}-> foi aceito${reset}\n" "$n" "$qtddezenas" "$line"
+		fi
+		echo "$line" >>"$filejogos"
+		echo "$cnow $var $line" >>"$filejogosformatado"
+		echo "$cnow $var $line -> foi aceito" >>"$filelog"
+	done
+
+	replicate '#' 80 >>"$filejogosformatado"
+	filetmp=$(mktemp)
+
+	sort "$filejogos" >"$filetmp"
+	cp "$filetmp" "$filejogos"
+	rm "$filetmp" 2>/dev/null
+
+	if ! ((quiet)); then
+		replicate '#' 100
+	fi
+	if ! ((resume)); then
+		msgout "Resumo:"
+		msgout "                    Palpites aceitos : ${white}$n"
+		msgout "Palpites descartados existindo no BD : ${red}$nDescartadosNoBD"
+		msgout "Palpites descartados por duplicidade : ${red}$nDescartadosDuplicidade"
+		msgout "Caso ganhar, considere fazer alguma doação para os desenvolvedores deste software :)"
+	fi
+}
+
+sh_filedatetimestat() { stat -c %w "$1"; }
+sh_filedatetime() { date -r "$1" +"%d/%m/%Y %T"; }
+sh_filedate() { date -r "$1" +"%d/%m/%Y"; }
+sh_filetime() { date -r "$1" +"%T"; }
+sh_datetime() { date +"%d/%m/%Y %T"; }
+sh_time() { date +"%T"; }
+sh_date() { date +"%d/%m/%Y"; }
+sh_filesize() { stat -c %s "$1" 2>/dev/null; }
+sh_linecount() { awk 'END {print NR}' "$1"; }
+alltrim() { echo "${1// /}"; } # remover todos espacos da string
+len() { echo "${#1}"; }
+
+DOT() {
+	printf '%s' "${blue}:: ${reset}"
+}
+
+sh_ascii_lines() {
+	if [[ "$LANG" =~ 'UTF-8' ]]; then
+		export NCURSES_NO_UTF8_ACS=0
+	else
+		export NCURSES_NO_UTF8_ACS=1
+	fi
+}
+
+sh_val() {
+	if [[ ${1} =~ ^([0-9]+)$ ]]; then
+		echo "N"
+	elif [[ ${1} =~ ^([[:alpha:]]+)$ ]]; then
+		echo "C"
+	else
+		echo "U"
+	fi
+}
+
+maxcol() {
+	if [ -z "${COLUMNS}" ]; then
+		COLUMNS=$(stty size)
+		COLUMNS=${COLUMNS##* }
+	fi
+	echo "$COLUMNS"
+}
+
+replicate() {
+	local Var
+	printf -v Var %"$2"s " " #  Coloca em $Var $1 espaços
+	echo "${Var// /$1}"      #  Troca os espaços pelo caractere escolhido
+}
+
+die() {
+	local msg=$1
+	shift
+	printf '%s\n' "$(DOT)${bold}${red}$msg${reset}" >&2
+	#	exit 1
+	return
+}
+
+msg() {
+	if ! ((quiet)); then
+		local msg=$1
+		shift
+		printf '%s\n' "$(DOT)${bold}${green}$msg${reset}"
+	fi
+	return
+}
+
+msgout() {
+	local msg=$1
+	shift
+	printf '%s\n' "$(DOT)${bold}${green}$msg${reset}"
+	return
+}
+
+erro() {
+	local msg=$1
+	shift
+	printf '%s\n' "$(DOT)${bold}${yellow}$msg${reset}" >&2
+	return
+}
+
+sh_checknet() {
+	xurl="$1"
+	# have internet?
+	log_info_msg "Testando internet em ${xurl}"
+	curl --insecure "$xurl" >/dev/null 2>&1 ||
+		{
+			evaluate_retval "$?"
+			log_msg "Sem rota para o servidor ($xurl) - Rodando com BD sem atualizar."
+			return 1
+		}
+	evaluate_retval "$?"
+	return $?
+}
+
+setvarcolors() {
+	# does the terminal support true-color?
+	if [[ $(tput colors) -eq 256 ]]; then
+		#tput setaf 127 | cat -v  #capturar saida
+		tput sgr0 # reset colors
+		bold=$(tput bold)
+		reset=$(tput sgr0)
+		#     black=$(tput setaf 0);
+		red=$(tput setaf 1)
+		green=$(tput setaf 2)
+		yellow=$(tput bold)$(tput setaf 3)
+		blue=$(tput setaf 4)
+		pink=$(tput setaf 5)
+		cyan=$(tput setaf 6)
+		white=$(tput setaf 7)
+		orange=$(tput setaf 3)
+		#     purple=$(tput setaf 125);
+		#     violet=$(tput setaf 61);
+
+	# doesn't support true-color
+	else
+		bold=''
+		reset="\e[0m"
+		blue="\e[1;34m"
+		cyan="\e[1;36m"
+		green="\e[1;32m"
+		orange="\e[1;33m"
+		red="\e[1;31m"
+		white="\e[1;37m"
+		yellow="\e[1;33m"
+		pink="\033[35;1m"
+		#     black="\e[1;30m";
+		#     purple="\e[1;35m";
+		#     violet="\e[1;35m";
+	fi
+}
+
+unsetvarcolors() {
+	bold=
+	reset=
+	blue=
+	cyan=
+	green=
+	orange=
+	red=
+	white=
+	yellow=
+	pink=
+	#  black=
+	#	purple=
+	#	violet=
+	NORMAL=
+	SUCCESS=
+	WARNING=
+	FAILURE=
+	BRACKET=
+	CURS_ZERO=
+	SUCCESS_PREFIX=
+	SET_COL=
+	SUCCESS_SUFFIX=
+	WAIT_PREFIX=
+	WAIT_SUFFIX=
+	WARNING_PREFIX=
+	WARNING_SUFFIX=
+}
+
+log_prefix() {
+	NORMAL="${reset}"   # Standard console grey
+	SUCCESS="${green}"  # Success is green
+	WARNING="${yellow}" # Warnings are yellow
+	FAILURE="${red}"    # Failures are red
+	#  INFO="${cyan}"               # Information is light cyan
+	BRACKET="${blue}" # Brackets are blue
+	BMPREFIX="     "
+	DOTPREFIX="  ${blue}::${reset} "
+	SUCCESS_PREFIX="${SUCCESS}  *  ${NORMAL}"
+	FAILURE_PREFIX="${FAILURE}*****${NORMAL}"
+	WARNING_PREFIX="${WARNING}  W  ${NORMAL}"
+	#  SKIP_PREFIX="${INFO}  S  ${NORMAL}"
+	SUCCESS_SUFFIX="${BRACKET}[${SUCCESS}  OK  ${BRACKET}]${NORMAL}"
+	FAILURE_SUFFIX="${BRACKET}[${FAILURE} FAIL ${BRACKET}]${NORMAL}"
+	WARNING_SUFFIX="${BRACKET}[${WARNING} WARN ${BRACKET}]${NORMAL}"
+	#  SKIP_SUFFIX="${BRACKET}[${INFO} SKIP ${BRACKET}]${NORMAL}"
+	WAIT_PREFIX="${WARNING}  R  ${NORMAL}"
+	WAIT_SUFFIX="${BRACKET}[${WARNING} WAIT ${BRACKET}]${NORMAL}"
+	FAILURE_PREFIX="${FAILURE}  X  ${NORMAL}"
+}
+
+evaluate_retval() {
+	local error_value="$?"
+
+	if [ $# -gt 0 ]; then
+		error_value="$1"
+	fi
+
+	if [ "${error_value}" = 0 ]; then
+		log_success_msg2 ""
+	else
+		log_failure_msg2 ""
+	fi
+	return "${error_value}"
+}
+
+log_failure_msg2() {
+	if ! ((quiet)); then
+		echo -n -e "${BMPREFIX}${*}"
+		echo -e "${CURS_ZERO}${FAILURE_PREFIX}${SET_COL}${FAILURE_SUFFIX}"
+	fi
+	return 0
+}
+
+log_success_msg() {
+	if ! ((quiet)); then
+		echo -n -e "${BMPREFIX}${*}"
+		echo -e "${CURS_ZERO}${SUCCESS_PREFIX}${SET_COL}${SUCCESS_SUFFIX}"
+	fi
+	return 0
+}
+
+log_success_msg2() {
+	if ! ((quiet)); then
+		echo -n -e "${BMPREFIX}${*}"
+		echo -n -e "${CURS_ZERO}${SUCCESS_PREFIX}${SET_COL}${SUCCESS_SUFFIX}\n"
+	fi
+	return 0
+}
+
+log_warning_msg() {
+	if ! ((quiet)); then
+		echo -n -e "${BMPREFIX}${*}"
+		echo -n -e "${CURS_ZERO}${WARNING_PREFIX}${SET_COL}${WARNING_SUFFIX}"
+	fi
+	return 0
+}
+
+log_wait_msg() {
+	if ! ((quiet)); then
+		echo -n -e "${BMPREFIX}${*}"
+		echo -e "${CURS_ZERO}${WAIT_PREFIX}${SET_COL}${WAIT_SUFFIX}"
+	fi
+	return 0
+}
+
+log_info_msg() {
+	if ! ((quiet)); then
+		echo -n -e "${BMPREFIX}${*}"
+	fi
+	return 0
+}
+
+log_msg() {
+	if ! ((quiet)); then
+		echo -n -e "${DOTPREFIX}${*}"
+	fi
+	return 0
+}
+
+toupper() {
+	declare -u TOUPPER="${*}"
+	echo -e "${TOUPPER}"
+}
+
+tolower() {
+	declare -l TOLOWER="${*}"
+	echo -e "${TOLOWER}"
+}
+
+check_deps() {
+	local errorFound=0
+	declare -a missing
+
+	for d in "${DEPENDENCIES[@]}"; do
+		[[ -z $(command -v "$d") ]] && { missing+=("$d") && errorFound=1 && printf '%s\n' "${red}ERRO${reset}: não encontrei o comando ${orange}'$d'${reset}"; }
+	done
+	#[[ ${#missing[@]} -ne 0 ]]
+	if ((errorFound)); then
+		erro "#### IMPOSSÍVEL CONTINUAR ####"
+		msg "Esse script precisa dos comandos listados acima" >&2
+		msg "Instale-os e/ou verifique se estão no seu \$PATH" >&2
+		exit 1
+	fi
+}
+
+sh_conf() {
+	read -r -p "$1 [S/n]"
+	[[ ${REPLY^} == "" ]] && return $true
+	[[ ${REPLY^} == "S" ]] && return $true
+	[[ ${REPLY^} == N ]] && return $false
+	die "ERRO: resposta deve ser S ou N"
+}
+
+sh_compare() {
+	local -i qtddezenas
+	local aResult
+	local aJogos
+
+	[[ ! -e "$filejogos" ]] && die "ERRO: nenhum jogo realizado para comparar. (use -h for help)"
+	[[ $(sh_filesize "$filejogos") -eq 0 ]] && die "ERRO: nenhum jogo realizado para comparar. (use -h for help)"
+
+	IFS=$'\n'
+	#local re='[0-9]{2}[ ]?'
+	local reR='([0-9]{2}[[:blank:]]+)((?1))+'
+	local reJ='([0-9]{2}[[:blank:]]?)((?1))+'
+	#	aResult=($(awk -F'-' '{ print $3 }' $fileresult))
+	#	aJogos=($(awk '{print " "$0}' $filejogos))
+	#	aResult=($(awk -F "$reR" 'lista[$1]++' $fileresult))
+	#	aJogos=($(awk -F "$reJ" 'lista[$1]++' $filejogos))
+	#	aResult=($(grep -Po "$reR" "$fileresult"))
+	#	aJogos=($(grep -Po "$reJ" "$filejogos"))
+	mapfile -t aResult < <(grep -Po "$reR" "$fileresult")
+	mapfile -t aJogos < <(grep -Po "$reJ" "$filejogos")
+	local n=1
+	local value
+
+	: <<'vilmar'
+	info "${aJogos[*]}"
+	echo
+	echo "${aJogos[0]}"
+	echo "${aJogos[1]}"
+vilmar
+
+	for value in "${aJogos[@]}"; do
+		#info "$value"
+		qtddezenas=$(($(len "$(alltrim "$value")") / 2))
+		if [[ ! "${aResult[*]}" =~ $value ]]; then
+			printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${green} OK ↑ não encontrado no BD${reset}\n" "$n" $qtddezenas "$value"
+		else
+			printf "Jogo ${bold}${cyan}#%04d ${yellow}%02d${reset} dezenas geradas: $pink%s${red} FALHA ↓ foi encontrado no BD${reset}\n" "$n" $qtddezenas "$value"
+		fi
+		((++n))
+	done
+	IFS=$SAVEIFS
+}
+
+sh_compareREAD() {
+	local i
+	[[ ! -e "$filejogos" ]] && die "ERRO: nenhum jogo realizado ainda para comparar. (use -h for help)"
+	[[ $(sh_filesize "$filejogos") -eq 0 ]] && die "ERRO: nenhum jogo realizado ainda para comparar. (use -h for help)"
+
+	while read -r i; do
+		if grep -q -o "$i" "$fileresult"; then
+			echo "$i - ${red}FALHA ↓ Já existe no BD${reset}"
+		else
+			echo "$i - ${green}OK ↑ não encontrado no BD${reset}"
+		fi
+	done <"$filejogos"
+}
+
+sh_compareGREP() {
+	#local re='[0-9]{2}[ ]?'
+	local reR='([0-9]{2}[[:space:]]+)((?1))+'
+	local reJ='([0-9]{2}[[:space:]]?)((?1))+'
+
+	[[ ! -e "$filejogos" ]] && die "ERRO: nenhum jogo realizado ainda para comparar. (use -h for help)"
+	[[ $(sh_filesize "$filejogos") -eq 0 ]] && die "ERRO: nenhum jogo realizado ainda para comparar. (use -h for help)"
+
+	msg "Fazendo chegagem das jogadas. Aguarde..."
+	if ! value=$(grep -s -o -f "$filejogos" "$fileresult"); then
+		printf '%s\n' "${green}OK ↑ nenhuma jogada armazenada foi encontrada no BD${reset}"
+	else
+		printf '%s\n' "Jogos ${cyan}\n$value\n${red}FALHA ↓ Já existe(m) no BD${reset}"
+	fi
+}
+
+sh_atualizaBD() {
+	contLinha=$1
+	#wget $SITE$contLinha --no-check-certificate -qO- > "$fileUltSorteioAtualizado" 						# mais lento
+	curl --compressed --insecure -s --url "$SITE$contLinha" --output "$fileUltSorteioAtualizado" # mais rápido
+
+	if [[ -z $(command -v jq) ]]; then
+		listaDezenas=$(sed -n '/"listaDezenas"/,+6p' "$fileUltSorteioAtualizado" | sed 's/[^0-9]//g')
+		listaDezenas="${listaDezenas//$'\n'/ }" #remove \n
+		dataApuracao=$(awk -F'"' '/"dataApuracao": "[0-9]{2}\/[0-9]{2}\/[0-9]{4}/ {print $4}' "$fileUltSorteioAtualizado")
+		#	   valorEstimadoProximoConcurso=$(grep '"valorEstimadoProximoConcurso":' "$fileUltSorteioAtualizado" | awk -F"-" '{print $2}' | sed 's/\,//g')
+		dadosSena=$(sed -n '/"faixa": 1/,+2p' "$fileUltSorteioAtualizado")
+		dadosQuina=$(sed -n '/"faixa": 2/,+2p' "$fileUltSorteioAtualizado")
+		dadosQuadra=$(sed -n '/"faixa": 3/,+2p' "$fileUltSorteioAtualizado")
+		numGanhadoresSena=$(awk '/"numeroDeGanhadores":/ {print $2}' <<<"$dadosSena" | sed 's/,//g')
+		numGanhadoresQuina=$(awk '/"numeroDeGanhadores":/ {print $2}' <<<"$dadosQuina" | sed 's/,//g')
+		numGanhadoresQuadra=$(awk '/"numeroDeGanhadores":/ {print $2}' <<<"$dadosQuadra" | sed 's/,//g')
+		valorPremioSena=$(awk '/"valorPremio":/ {print $2}' <<<"$dadosSena" |
+			sed 's/,//g' | awk '{printf "%.2f\n" ,$1}' |
+			sed -e :a -e 's/\(.*[0-9]\)\([0-9]\{3\}\)/\1,\2/;ta' | tr ',.' '.,')
+		valorPremioQuina=$(awk '/"valorPremio":/ {print $2}' <<<"$dadosQuina" |
+			sed 's/,//g' | awk '{printf "%.2f\n" ,$1}' |
+			sed -e :a -e 's/\(.*[0-9]\)\([0-9]\{3\}\)/\1,\2/;ta' | tr ',.' '.,')
+		valorPremioQuadra=$(awk '/"valorPremio":/ {print $2}' <<<"$dadosQuadra" |
+			sed 's/,//g' | awk '{printf "%.2f\n" ,$1}' |
+			sed -e :a -e 's/\(.*[0-9]\)\([0-9]\{3\}\)/\1,\2/;ta' | tr ',.' '.,')
+		varLinhaInteira="$contLinha - $dataApuracao - $listaDezenas - $valorPremioSena - $numGanhadoresSena - $valorPremioQuina - $numGanhadoresQuina - $valorPremioQuadra - $numGanhadoresQuadra"
+		tee -a "$fileresult" <<<"$varLinhaInteira"
+	else # usando jq
+		listaDezenas=$(jq -r '.listaDezenas[range(0;6)]' "$fileUltSorteioAtualizado")
+		listaDezenas="${listaDezenas//$'\n'/ }" #remove \n
+		dataApuracao=$(jq -r '.dataApuracao' "$fileUltSorteioAtualizado")
+		#	   valorEstimadoProximoConcurso=$(jq -r '.valorEstimadoProximoConcurso' "$fileUltSorteioAtualizado")
+		numGanhadoresSena=$(jq -r '.listaRateioPremio[0].numeroDeGanhadores' "$fileUltSorteioAtualizado")
+		valorPremioSena=$(jq -r '.listaRateioPremio[0].valorPremio' "$fileUltSorteioAtualizado" | awk '{printf "%.2f\n" ,$1}' | sed -e :a -e 's/\(.*[0-9]\)\([0-9]\{3\}\)/\1,\2/;ta' | tr ',.' '.,')
+		numGanhadoresQuina=$(jq -r '.listaRateioPremio[1].numeroDeGanhadores' "$fileUltSorteioAtualizado")
+		valorPremioQuina=$(jq -r '.listaRateioPremio[1].valorPremio' "$fileUltSorteioAtualizado" | awk '{printf "%.2f\n" ,$1}' | sed -e :a -e 's/\(.*[0-9]\)\([0-9]\{3\}\)/\1,\2/;ta' | tr ',.' '.,')
+		numGanhadoresQuadra=$(jq -r '.listaRateioPremio[2].numeroDeGanhadores' "$fileUltSorteioAtualizado")
+		valorPremioQuadra=$(jq -r '.listaRateioPremio[2].valorPremio' "$fileUltSorteioAtualizado" | awk '{printf "%.2f\n" ,$1}' | sed -e :a -e 's/\(.*[0-9]\)\([0-9]\{3\}\)/\1,\2/;ta' | tr ',.' '.,')
+		varLinhaInteira="$contLinha - $dataApuracao - $listaDezenas - $valorPremioSena - $numGanhadoresSena - $valorPremioQuina - $numGanhadoresQuina - $valorPremioQuadra - $numGanhadoresQuadra"
+		tee -a "$fileresult" <<<"$varLinhaInteira"
+	fi
+}
+
+sh_checkresultadosfaltantes() {
+	local -i numUltSorteioGravado=$1
+	local -i numUltSorteio=$2
+	local -i nfalta=$3
+	local -i n=0
+	local value
+	local array
+	local filetmp
+
+	log_info_msg "Checando a integridade do BD. Aguarde..."
+	evaluate_retval "$?"
+	if ! ((force)); then
+		if [[ $numUltSorteioGravado -eq 0 || nfalta -ge 11 ]]; then
+			if sh_checknet "${URL_GITHUB_RESULTADOSENA}"; then
+				#curl --compressed --insecure -s --url "${URL_GITHUB_RESULTADOSENA}" --output $fileresult
+				log_info_msg "Baixando arquivo ${URL_GITHUB_RESULTADOSENA}"
+				if ! wget -c --no-check-certificate "${URL_GITHUB_RESULTADOSENA}" -qO - >"$fileresult"; then
+					echo "#" >>"$fileresult"
+				fi
+				evaluate_retval "$?"
+			else
+				evaluate_retval "$?"
+				echo "#" >>"$fileresult"
+			fi
+		fi
+	else
+		rm -f "$fileresult" 2>/dev/null
+		echo "#" >"$fileresult"
+	fi
+
+	filetmp=$(mktemp)
+	seq "$numUltSorteio" >"$filetmp"
+	array=$(awk 'NR == FNR {file1[$1]++; next} !($0 in file1)' "$fileresult" "$filetmp")
+	rm -f "$filetmp" 2>/dev/null
+
+	for value in $array; do
+		#info $value
+		if ! ((n)); then
+			msg "Atualizando Banco de Dados. Aguarde..."
+		fi
+		((++n))
+		sh_atualizaBD "$value"
+	done
+}
+
+sh_update() {
+	declare -i numUltSorteio
+	declare -i numUltSorteioGravado
+
+	if ((force)); then
+		sh_conf "$(DOT)Essa opção irá zerar o BD local e baixar novamente da CAIXA e é demorada. Deseja continuar?"
+		LCONF=$?
+		if ! ((LCONF)); then
+			return
+		fi
+		numUltSorteioGravado=0
+	fi
+
+	#### REMOVENDO ARQUIVOS TEMPORARIOS
+	rm "$fileUltSorteio" 2>/dev/null
+	rm "$fileUltSorteioAtualizado" 2>/dev/null
+
+	sh_checknet "${SITE}" || return 1
+	[[ ! -e "$fileresult" ]] && : >|"$fileresult"
+
+	#### COLETANDO DADOS DO ULTIMO RESULTADO DA MEGASENA PULICADO PELA API DA CAIXA
+	log_info_msg "Coletando dados dos ultimo resultado da ${cyan}MegaSena${reset} publicado pela ${blue}CAIXA${reset}"
+	#	wget "$SITE" --no-check-certificate -qO- > "$fileUltSorteio"					# mais lento
+	curl --compressed --insecure -s --url "$SITE" --output "$fileUltSorteio" # mais rápido
+	evaluate_retval "$?"
+
+	#### COLETANDO O NUMERO DO ULTIMO SORTEIO NA CAIXA e GRAVADO NO BD
+	if [[ -z $(command -v jq) ]]; then
+		numUltSorteio=$(awk '/["]numero["]:/ {print $2}' "$fileUltSorteio" | sed 's/\,//g' | sed '/^$/d' | sed -e "s/\r//g")
+		numUltSorteioGravado=$(awk 'END {print NR}' "$fileresult")
+	else
+		numUltSorteio=$(jq -r '.numero' $fileUltSorteio)
+		numUltSorteioGravado=$(awk 'END {print NR}' "$fileresult")
+	fi
+	if ((force)); then
+		numUltSorteioGravado=0
+	fi
+
+	#### COLETANDO DADOS DOS DOS RESULTADOS NAO INCLUÍDOS NO BD
+	declare -i falta=$((numUltSorteio - numUltSorteioGravado))
+	log_info_msg "Sorteios feitos pela CAIXA : ${red}$numUltSorteio${reset}"
+	evaluate_retval "$?"
+	log_info_msg "Sorteios registrados no BD : ${yellow}$numUltSorteioGravado${reset}"
+	evaluate_retval "$?"
+	log_info_msg "${cyan}${falta}${reset} novo(s) registro(s) encontrado(s)!"
+	evaluate_retval "$?"
+	sh_checkresultadosfaltantes "$numUltSorteioGravado" "$numUltSorteio" "$falta"
+	sort -g -u "$fileresult" >"$fileresult.sort"
+	cp "$fileresult.sort" "$fileresult"
+	rm -f "$fileresult.sort" 2>/dev/null
+	log_info_msg "${green}OK. Banco de Dados atualizado!"
+	evaluate_retval "$?"
+
+	#### REMOVENDO ARQUIVOS TEMPORARIOS
+	rm "$fileUltSorteio" 2>/dev/null
+	rm "$fileUltSorteioAtualizado" 2>/dev/null
+}
+
+sh_version() {
+	printf '%s' "${bold}${cyan}${0##*/} v${_VERSION_}${reset}"
+}
+
+sh_logo() {
+	sh_version
+	printf '%s\n' "$bold$yellow"
+	cat <<'LOGO'
+   ________  ____  ____ _
+  / ___/ _ \/ __ \/ __ `/
+ (__  )  __/ / / / /_/ /
+/____/\___/_/ /_/\__,_/
+LOGO
+	printf '%s' "$reset"
+}
+
+sh_listarjogos() {
+	[[ ! -e "$filejogosformatado" ]] && die "ERRO: arquivo log de jogos ainda não existe. Faça alguns jogos primeiro. (use -h for help)"
+	more "$filejogosformatado"
+}
+
+choosefile() {
+	while true; do
+		pushd "$CPATH" &>/dev/null || exit
+		#     ARRAY_FILE_LOG=($(find -- *.log -type f 2>/dev/null))
+		mapfile -t ARRAY_FILE_LOG < <(find -- *.log -type f 2>/dev/null)
+		popd &>/dev/null || exit
+		[[ "${#ARRAY_FILE_LOG[@]}" -eq 0 ]] && die "ERRO: arquivo log de jogos ainda não existe. Faça alguns jogos primeiro. (use -h for help)"
+		local array=()
+		local i
+		local n=0
+		local nc=0
+
+		for i in "${ARRAY_FILE_LOG[@]}"; do
+			array[((n++))]="$i"
+			array[((n++))]=$(printf "%-6s$sep%5s PALPITES" "$(date -r "$i" +"%d/%m/%Y %T")" "$(sh_linecount "$i")")
+			((++nc))
+		done
+
+		#		          --ascii-lines													               \
+		if ((FULLDIALOG)); then
+			sd=$(${DIALOG} \
+				--clear \
+				--title "Arquivos de Log" \
+				--backtitle "${0##*/} v${_VERSION_}" \
+				--ok-label "Visualizar" \
+				--cancel-label "Sair" \
+				--colors \
+				--extra-button \
+				--extra-label "Excluir" \
+				--menu "\nArquivos Log de jogos" \
+				0 0 0 "${array[@]}" 2>&1 >/dev/tty)
+		else
+			sd=$(${DIALOG} \
+				--clear \
+				--fb \
+				--ok-button "Visualizar" \
+				--cancel-button "Sair" \
+				--backtitle "${0##*/} v${_VERSION_}" \
+				--title "Arquivos de Log" \
+				--menu "\nArquivos Log de jogos" \
+				0 0 0 "${array[@]}" 2>&1 >/dev/tty)
+		fi
+		exit_status=$?
+		case $exit_status in
+		"$D_OK")
+			if test ! -z "$sd"; then
+				display_result "$sd"
+			fi
+			;;
+		"$D_ESC" | "$D_CANCEL")
+			clear
+			exit
+			;;
+		3)
+			${DIALOG} --yesno "Deseja excluir o arquivo $sd ?" 5 55
+			exit_status=$?
+			case $exit_status in
+			"$D_OK")
+				if test -e "$sd"; then
+					rm -f "$CPATH/$sd" 2>/dev/null
+					continue
+				fi
+				;;
+			"$D_ESC" | "$D_CANCEL")
+				continue
+				;;
+			esac
+			;;
+		esac
+	done
+}
+
+sh_usage() {
+	cat <<EOF
+${white}sena v$_VERSION_${reset}
+${orange}uso: sena [opcão] ${reset}
+
+[opcão] ${reset}
+   ${red}-j 3${cyan}                # jogar 03 palpites (padrão 6 dezenas)${reset}
+   ${red}-j 10${cyan}               # jogar 10 palpites (padrão 6 dezenas)${reset}
+   ${red}-j 10 6${cyan}             # jogar 10 palpites com 06 (min) dezenas${reset}
+   ${red}-j 5 15${cyan}             # jogar 05 palpites com 15 (max) dezenas${reset}
+   ${red}-h  --help${cyan}          # este help${reset}
+   ${red}-c  --compare${cyan}       # comparar palpites com o BD${reset}
+   ${red}-l  --log${cyan}           # exibir log de palpites efetuados - (exibição com dialog sem bordas - default)${reset}
+   ${red}-lw --logw${cyan}          # exibir log de palpites efetuados - (exibiçao com whiptail)${reset}
+   ${red}-ld --logd${cyan}          # exibir log de palpites efetuados - (exibição com dialog com bordas)${reset}
+   ${red}-U  --update${cyan}        # atualizar BD com a CAIXA${reset}
+   ${red}-F  --force${cyan}         # força a atualização do zero do BD com a CAIXA${reset}
+   ${red}-V  --version${cyan}       # exibe versão do aplicativo${reset}
+   ${red}-s  --resume${cyan}        # mostra somente resultado
+   ${red}-q  --quiet${cyan}         # saida resumida
+   ${red}    --nocolor${cyan}       # remove cores da saída (use como primeiro parâmetro - ex: sena --nocolor -j 10)
+EOF
+}
+
+#					 --ascii-lines				               \
+display_result() {
+	if ((FULLDIALOG)); then
+		${DIALOG} --title "$1" \
+			--clear \
+			--no-cr-wrap \
+			--no-collapse \
+			--ok-label "Voltar" \
+			--cancel-label "Sair" \
+			--exit-label "Voltar" \
+			--backtitle "${0##*/} v${_VERSION_}" \
+			--textbox "$1" \
+			0 0
+	else
+		${DIALOG} --title "$1" \
+			--clear \
+			--fb \
+			--ok-button "Voltar" \
+			--backtitle "${0##*/} v${_VERSION_}" \
+			--textbox "$1" \
+			0 0
+	fi
+}
+
+init() {
+	while test $# -gt 0; do
+		case "${1}" in
+		-h | -H | --help)
+			sh_usage
+			exit $(($# ? 0 : 1))
+			;;
+		-c | -C | --compare)
+			sh_compare
+			exit $(($# ? 0 : 1))
+			;;
+		-U | --update)
+			sh_update
+			exit $(($# ? 0 : 1))
+			;;
+		-f | -F | --force)
+			force=$true
+			sh_update
+			exit $(($# ? 0 : 1))
+			;;
+		-V | --version)
+			sh_logo
+			exit $(($# ? 0 : 1))
+			;;
+		-l | -L | --log)
+			FULLDIALOG=$true
+			DIALOG="dialog --no-lines"
+			choosefile
+			exit $(($# ? 0 : 1))
+			;;
+		-lw | --logw)
+			FULLDIALOG=$false
+			DIALOG="whiptail"
+			choosefile
+			exit $(($# ? 0 : 1))
+			;;
+		-ld | --logd)
+			FULLDIALOG=$true
+			DIALOG="dialog"
+			choosefile
+			exit $(($# ? 0 : 1))
+			;;
+		-j | -J | --jogo)
+			shift
+			[[ $# -lt 1 ]] && die "ERRO: requer argumento/parâmetro. (use -h for help)"
+			ctype1=$(sh_val "$1")
+			[[ $ctype1 != "N" ]] && die "ERRO: primeiro parâmetro deve ser numérico. (use -h for help)"
+			if test $# -eq 2; then
+				ctype2=$(sh_val "$2")
+				[[ $ctype2 != "N" ]] && die "ERRO: segundo parâmetro deve ser numérico. (use -h for help)"
+			fi
+			sh_playsena "$@"
+			exit $(($# ? 0 : 1))
+			;;
+		--nocolor)
+			unsetvarcolors
+			;;
+		-q | --quiet)
+			quiet=$true
+			;;
+		-s | --resume)
+			quiet=$true
+			resume=$true
+			;;
+		*) die "operação não suportada: $1 (use -h for help)" ;;
+		esac
+		shift
+	done
+}
+
+setvarcolors
+log_prefix
+check_deps
+sh_ascii_lines
+
+[[ -z $1 ]] && {
+	sh_usage
+	exit $(($# ? 0 : 1))
+}
+init "$@"
