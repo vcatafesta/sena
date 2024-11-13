@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-# script wrapper para /opt/sena/sena
-# Copyright (c) Vilmar Catafesta, 2024 <vcatafesta@gmail.com>
-
-cd /opt/sena
-exec ./sena "$@"
