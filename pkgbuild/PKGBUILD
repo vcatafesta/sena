@@ -1,15 +1,14 @@
 # Maintainer: Vilmar Catafesta <vcatafesta@gmail.com>
-# Contribuitor: Vilmar Catafesta <vcatafesta@gmail.com>
 
 pkgname=sena
 pkgdesc="gerador randômico de jogos da megasena"
-#depends=('')
+depends=(dialog curl wget grep coreutils sed awk ncurses findutils jq)
 #makedepends=('')
 #optdepends=('')
 #conflicts=('')
 #provides=('')
 #replaces=('')
-pkgver=$(date +%y.%m.%d)
+pkgver=$(date +%Y%m%d)
 pkgrel=$(date +%H%M)
 arch=('any')
 license=('MIT')
