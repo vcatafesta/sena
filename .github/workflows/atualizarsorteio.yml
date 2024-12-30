@@ -30,16 +30,21 @@ jobs:
             findutils \
             jq
 
-      # Passo 3: Rodar o script sena -j 3
+      # Passo 3: Definir a variável TERM
+      - name: Set TERM environment variable
+        run: |
+          export TERM=xterm
+
+      # Passo 4: Rodar o script sena -j 3
       - name: Run sena script
         run: |
           ./sena -j 3
 
-      # Passo 4: Fazer push para o repositório
+      # Passo 5: Fazer push para o repositório
       - name: Commit and push changes
         run: |
           git config --global user.name "GitHub Actions Bot"
           git config --global user.email "actions@github.com"
           git add .
-          git diff --quiet || git commit -m "Atualização automática do sorteio"  # Só faz commit se houver mudanças
-          git push || echo "No changes to push"  # Ignora erro de push se não houver alterações
+          git diff --quiet || git commit -m "Atualização automática do sorteio"
+          git push || echo "No changes to push"
