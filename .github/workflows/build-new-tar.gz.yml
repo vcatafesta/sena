@@ -1,0 +1,97 @@
+name: Criar release e arquivo .tar.gz
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        type: boolean
+        description: "With TMATE"
+        required: false
+        default: true
+
+  repository_dispatch:
+    types:
+      - webhook
+      - "**"
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configurar TMATE para depuração
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event.inputs.debug_enabled == 'true' }}
+
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Obter a hora atual
+        id: get-time
+        run: echo "time=$(date +'%Y.%m.%d-%H%M')" >> $GITHUB_OUTPUT
+
+      - name: Obter nome do repositório
+        id: get-repo-name
+        run: echo "repo_name=$(basename $GITHUB_REPOSITORY)" >> $GITHUB_OUTPUT
+
+      - name: Criar arquivo .tar.gz
+        run: |
+          tar -cf "${{ steps.get-repo-name.outputs.repo_name }}.tar.gz" .
+
+      - name: Calcular MD5 do arquivo .tar.gz
+        run: |
+          if [[ -f "${{ steps.get-repo-name.outputs.repo_name }}.tar.gz" ]]; then
+            md5sum "${{ steps.get-repo-name.outputs.repo_name }}.tar.gz" > "${{ steps.get-repo-name.outputs.repo_name }}.tar.gz.md5"
+            echo "MD5 hash calculado:"
+            cat "${{ steps.get-repo-name.outputs.repo_name }}.tar.gz.md5"
+          else
+            echo "Erro: Arquivo .tar.gz não encontrado"
+            exit 1
+          fi
+
+      - name: Salvar artefatos
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: |
+            ${{ steps.get-repo-name.outputs.repo_name }}.tar.gz
+            ${{ steps.get-repo-name.outputs.repo_name }}.tar.gz.md5
+
+      - name: Criar release
+        id: create-release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.ORGANIZATION_TOKEN }}
+        with:
+          tag_name: ${{ steps.get-time.outputs.time }}
+          release_name: Release ${{ steps.get-time.outputs.time }}
+          body: |
+            - **Data e Hora        :** ${{ steps.get-time.outputs.time }}
+            - **Nome do Repositório:** ${{ steps.get-repo-name.outputs.repo_name }}
+            - **Arquivo tar        :** ${{ steps.get-repo-name.outputs.repo_name }}.tar.gz
+            - **Arquivo md5        :** ${{ steps.get-repo-name.outputs.repo_name }}.tar.gz.md5
+          draft: false
+          prerelease: false
+
+      - name: Fazer upload do arquivo .tar.gz no release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.ORGANIZATION_TOKEN }}
+        with:
+          upload_url: ${{ steps.create-release.outputs.upload_url }}
+          asset_path: ./${{ steps.get-repo-name.outputs.repo_name }}.tar.gz
+          asset_name: ${{ steps.get-repo-name.outputs.repo_name }}.tar.gz
+          asset_content_type: application/gzip
+
+      - name: Fazer upload do arquivo .tar.gz.md5 no release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.ORGANIZATION_TOKEN }}
+        with:
+          upload_url: ${{ steps.create-release.outputs.upload_url }}
+          asset_path: ./${{ steps.get-repo-name.outputs.repo_name }}.tar.gz.md5
+          asset_name: ${{ steps.get-repo-name.outputs.repo_name }}.tar.gz.md5
+          asset_content_type: text/plain
