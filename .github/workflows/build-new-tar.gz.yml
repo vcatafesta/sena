@@ -1,4 +1,4 @@
-name: Criar release e arquivo .tar.gz
+name: Build new release .tar.gz
 
 on:
   push:
@@ -21,16 +21,19 @@ on:
       - webhook
       - "**"
 
+env:
+  GITHUB_TOKEN: ${{ secrets.ORGANIZATION_TOKEN }}
+
 jobs:
   create-release:
     runs-on: ubuntu-latest
     steps:
-#      - name: Instalar TMATE
-#        run: sudo apt-get update && sudo apt-get install -y tmate
+      #      - name: Instalar TMATE
+      #        run: sudo apt-get update && sudo apt-get install -y tmate
 
-#      - name: Configurar TMATE para depuração
-#        uses: mxschmitt/action-tmate@v3
-#        if: ${{ github.event.inputs.debug_enabled == 'true' }}
+      #      - name: Configurar TMATE para depuração
+      #        uses: mxschmitt/action-tmate@v3
+      #        if: ${{ github.event.inputs.debug_enabled == 'true' }}
 
       - name: Checkout do código
         uses: actions/checkout@v4
@@ -69,8 +72,6 @@ jobs:
       - name: Criar release
         id: create-release
         uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.ORGANIZATION_TOKEN }}
         with:
           tag_name: ${{ steps.get-time.outputs.time }}
           release_name: Release ${{ steps.get-time.outputs.time }}
@@ -84,8 +85,6 @@ jobs:
 
       - name: Fazer upload do arquivo .tar.gz no release
         uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.ORGANIZATION_TOKEN }}
         with:
           upload_url: ${{ steps.create-release.outputs.upload_url }}
           asset_path: ./${{ steps.get-repo-name.outputs.repo_name }}.tar.gz
@@ -94,8 +93,6 @@ jobs:
 
       - name: Fazer upload do arquivo .tar.gz.md5 no release
         uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.ORGANIZATION_TOKEN }}
         with:
           upload_url: ${{ steps.create-release.outputs.upload_url }}
           asset_path: ./${{ steps.get-repo-name.outputs.repo_name }}.tar.gz.md5
