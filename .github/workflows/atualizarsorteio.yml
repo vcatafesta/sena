@@ -8,7 +8,7 @@ on:
     - cron: "0 18 * * 5" # Executa toda sexta-feira às 18h (UTC)
 
 jobs:
-  update-draw:
+  update-cef:
     runs-on: ubuntu-latest
 
     steps:

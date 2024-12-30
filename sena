@@ -27,6 +27,9 @@
 #     awk, bsdtar (libarchive), bzip2, coreutils, fakeroot, file, find (findutils),
 #     gettext, gpg, grep, gzip, sed, tput (ncurses), xz, etc
 #########################################################################
+export TERM=${TERM:-xterm}
+export TERM=${TERM:-xterm-256color}
+
 # debug
 #export PS4=$'${red}${0##*/}${cyan}[$LINENO]${reset} '
 #set -x
