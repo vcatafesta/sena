@@ -22,7 +22,8 @@ on:
       - "**"
 
 env:
-  GITHUB_TOKEN: ${{ secrets.ORGANIZATION_TOKEN }}
+  GITHUB_TOKEN: "${{ secrets.ORGANIZATION_TOKEN }}"
+  REPO_NAME: "$(basename $GITHUB_REPOSITORY)"
 
 jobs:
   create-release:
