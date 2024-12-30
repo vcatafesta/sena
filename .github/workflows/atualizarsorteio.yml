@@ -28,12 +28,21 @@ jobs:
             ncurses-bin \
             dialog \
             findutils \
-            jq
+            jq \
+            tmate
+
+      - name: Configurar TMATE para depuração
+        uses: mxschmitt/action-tmate@v3
+        #if: ${{ github.event.inputs.debug_enabled == 'true' }}
+        with:
+          install-dependencies: false
+          detached: true
 
       # Passo 3: Definir a variável TERM
       - name: Set TERM environment variable
         run: |
-          export TERM=xterm
+          export TERM=${TERM:-xterm}
+          export TERM=${TERM:-xterm-256color}
 
       # Passo 4: Rodar o script sena -j 3
       - name: Run sena script
