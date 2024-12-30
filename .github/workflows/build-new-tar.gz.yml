@@ -62,7 +62,7 @@ jobs:
       - name: Salvar artefatos
         uses: actions/upload-artifact@v4
         with:
-          name: release-artifacts
+          name: ${{ env.REPO_NAME }}.tar.gz
           path: |
             ${{ env.repo_name }}.tar.gz
             ${{ env.repo_name }}.tar.gz.md5
