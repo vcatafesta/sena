@@ -1,9 +1,9 @@
 name: Criar release e arquivo .tar.gz
 
 on:
-#  push:
-#    branches:
-#      - main
+  push:
+    branches:
+      - main
 
   workflow_dispatch:
     inputs:
