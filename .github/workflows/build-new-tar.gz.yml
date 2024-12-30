@@ -69,6 +69,12 @@ jobs:
             ${{ env.repo_name }}.tar.gz
             ${{ env.repo_name }}.tar.gz.md5
 
+      - name: Salvar arquivo .tar.gz.md5 como artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.REPO_NAME }}.tar.gz.md5
+          path: ${{ env.REPO_NAME }}.tar.gz.md5
+
       - name: Criar release
         id: create-release
         uses: actions/create-release@v1
