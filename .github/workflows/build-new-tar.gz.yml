@@ -23,7 +23,6 @@ on:
 
 env:
   GITHUB_TOKEN: "${{ secrets.ORGANIZATION_TOKEN }}"
-  REPO_NAME: "${{github.repository}}"
 
 jobs:
   create-release:
@@ -43,7 +42,9 @@ jobs:
         run: echo "time=$(date +'%Y.%m.%d-%H%M')" >> $GITHUB_ENV
 
       - name: Obter nome do repositório
-        run: echo "repo_name=$(basename $GITHUB_REPOSITORY)" >> $GITHUB_ENV
+        run: |
+          echo "repo_name=$(basename $GITHUB_REPOSITORY)" >> $GITHUB_ENV
+          echo "REPO_NAME=$(basename $GITHUB_REPOSITORY)" >> $GITHUB_ENV
 
       - name: Criar arquivo .tar.gz
         run: |
