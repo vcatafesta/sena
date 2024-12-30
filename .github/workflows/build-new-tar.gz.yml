@@ -23,7 +23,7 @@ on:
 
 env:
   GITHUB_TOKEN: "${{ secrets.ORGANIZATION_TOKEN }}"
-  REPO_NAME: "$(basename $GITHUB_REPOSITORY)"
+  REPO_NAME: "${{github.repository}}"
 
 jobs:
   create-release:
