@@ -13,6 +13,9 @@ on:
         required: false
         default: true
 
+  #  schedule:  # Executa automaticamente toda sexta-feira às 05:00
+  #    - cron: '0 5 * * 5'
+
   repository_dispatch:
     types:
       - webhook
@@ -22,12 +25,12 @@ jobs:
   create-release:
     runs-on: ubuntu-latest
     steps:
-      - name: Instalar TMATE
-        run: sudo apt-get update && sudo apt-get install -y tmate
+#      - name: Instalar TMATE
+#        run: sudo apt-get update && sudo apt-get install -y tmate
 
-      - name: Configurar TMATE para depuração
-        uses: mxschmitt/action-tmate@v3
-        if: ${{ github.event.inputs.debug_enabled == 'true' }}
+#      - name: Configurar TMATE para depuração
+#        uses: mxschmitt/action-tmate@v3
+#        if: ${{ github.event.inputs.debug_enabled == 'true' }}
 
       - name: Checkout do código
         uses: actions/checkout@v4
