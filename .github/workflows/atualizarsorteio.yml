@@ -5,7 +5,7 @@ on:
     branches:
       - main
   schedule:
-    - cron: '0 18 * * 5' # Executa toda sexta-feira às 18h (UTC)
+    - cron: "0 18 * * 5" # Executa toda sexta-feira às 18h (UTC)
 
 jobs:
   update-draw:
@@ -16,12 +16,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Passo 2: Rodar o script sena -j 3
+      # Passo 2: Instalar pacotes necessários
+      - name: Install required tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            curl \
+            wget \
+            grep \
+            gawk \
+            ncurses-bin \
+            dialog \
+            findutils \
+            jq
+
+      # Passo 3: Rodar o script sena -j 3
       - name: Run sena script
         run: |
           ./sena -j 3
 
-      # Passo 3: Fazer push para o repositório
+      # Passo 4: Fazer push para o repositório
       - name: Commit and push changes
         run: |
           git config --global user.name "GitHub Actions Bot"
