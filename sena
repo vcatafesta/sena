@@ -44,8 +44,8 @@ CPATH=$PWD
 filejogos="$CPATH/jogos.txt"
 filejogosformatado="$CPATH/jogosformatado.txt"
 fileresult="$CPATH/resultadosena.dat"
-fileUltSorteio='/tmp/UltSorteio.txt'
-fileUltSorteioAtualizado='/tmp/UltSorteioAtualizado.txt'
+fileUltSorteio='/tmp/UltSorteio.json'
+fileUltSorteioAtualizado='/tmp/UltSorteioAtualizado.json'
 SITE='https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/'
 URL_GITHUB_RESULTADOSENA='https://github.com/vcatafesta/sena/raw/main/resultadosena.dat'
 
@@ -677,8 +677,8 @@ sh_update() {
 	fi
 
 	#### REMOVENDO ARQUIVOS TEMPORARIOS
-	rm "$fileUltSorteio" 2>/dev/null
-	rm "$fileUltSorteioAtualizado" 2>/dev/null
+	#rm "$fileUltSorteio" 2>/dev/null
+	#rm "$fileUltSorteioAtualizado" 2>/dev/null
 
 	sh_checknet "${SITE}" || return 1
 	[[ ! -e "$fileresult" ]] && : >|"$fileresult"
@@ -717,8 +717,8 @@ sh_update() {
 	evaluate_retval "$?"
 
 	#### REMOVENDO ARQUIVOS TEMPORARIOS
-	rm "$fileUltSorteio" 2>/dev/null
-	rm "$fileUltSorteioAtualizado" 2>/dev/null
+	#rm "$fileUltSorteio" 2>/dev/null
+	#rm "$fileUltSorteioAtualizado" 2>/dev/null
 }
 
 sh_version() {
