@@ -74,7 +74,7 @@ exec ./$(basename "$pkgname") "\$@"
 EOF
 }
 
-post_install())) {
+post_install() {
   chmod 755  "${pkgdir}/usr/bin/$pkgname"
   chmod 1777 "${pkgdir}/opt/$pkgname"
 }
