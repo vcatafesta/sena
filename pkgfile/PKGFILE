@@ -63,7 +63,7 @@ EOF
   chmod 755 "${pkgdir}/usr/bin/$pkgname"
 
 	install -m666 "${srcdir}/resultadosena.dat" "${pkgdir}/opt/$pkgname/resultadosena.dat"
-	install -m755 "${pkgdir}/opt/$pkgname/doc"
+	install -Dm755 "${pkgdir}/opt/$pkgname/doc"
 	install -m644 "${srcdir}/INSTALL"           "${pkgdir}/opt/$pkgname/doc/"
 	install -m644 "${srcdir}/LICENSE"           "${pkgdir}/opt/$pkgname/doc/"
 	install -m644 "${srcdir}/Makefile"          "${pkgdir}/opt/$pkgname/doc/"
@@ -71,11 +71,11 @@ EOF
 
 	# Install license file if present
 	if [ -f "LICENSE" ]; then
-		install -m644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+		install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 	fi
 
 	# Install documentation if present
 	if [ -f "README.md" ]; then
-		install -m644 README.md "${pkgdir}/usr/share/doc/${pkgname}/README.md"
+		install -Dm644 README.md "${pkgdir}/usr/share/doc/${pkgname}/README.md"
 	fi
 }
