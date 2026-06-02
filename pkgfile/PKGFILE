@@ -43,12 +43,24 @@ package() {
 		user_home="$HOME"
 	fi
 
-#	# Cria o diretório no home do usuário que invocou o sudo
-#	mkdir -p "${user_home}/$pkgname"
-#	echo "Diretório $pkgname criado em ${user_home}"
-
 	install -dm1777 "${pkgdir}/opt/$pkgname"
-	install -m755 "${srcdir}/$pkgname" "${pkgdir}/opt/$pkgname/$pkgname"
+	install -dm755 "${pkgdir}/opt/$pkgname/doc"
+	install -Dm755 "${srcdir}/$pkgname"           "${pkgdir}/opt/$pkgname/$pkgname"
+	install -Dm666 "${srcdir}/resultadosena.dat" "${pkgdir}/opt/$pkgname/resultadosena.dat"
+	install -Dm644 "${srcdir}/INSTALL"           "${pkgdir}/opt/$pkgname/doc/"
+	install -Dm644 "${srcdir}/LICENSE"           "${pkgdir}/opt/$pkgname/doc/"
+	install -Dm644 "${srcdir}/Makefile"          "${pkgdir}/opt/$pkgname/doc/"
+	install -Dm644 "${srcdir}/README.md"         "${pkgdir}/opt/$pkgname/doc/"
+
+	# Install license file if present
+	if [ -f "LICENSE" ]; then
+		install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+	fi
+
+	# Install documentation if present
+	if [ -f "README.md" ]; then
+		install -Dm644 README.md "${pkgdir}/usr/share/doc/${pkgname}/README.md"
+	fi
 
   # Criar o script wrapper em /usr/bin
   install -d "${pkgdir}/usr/bin"
@@ -61,21 +73,4 @@ cd /opt/$pkgname
 exec ./$(basename "$pkgname") "\$@"
 EOF
   chmod 755 "${pkgdir}/usr/bin/$pkgname"
-
-	install -m666 "${srcdir}/resultadosena.dat" "${pkgdir}/opt/$pkgname/resultadosena.dat"
-	install -Dm755 "${pkgdir}/opt/$pkgname/doc"
-	install -m644 "${srcdir}/INSTALL"           "${pkgdir}/opt/$pkgname/doc/"
-	install -m644 "${srcdir}/LICENSE"           "${pkgdir}/opt/$pkgname/doc/"
-	install -m644 "${srcdir}/Makefile"          "${pkgdir}/opt/$pkgname/doc/"
-	install -m644 "${srcdir}/README.md"         "${pkgdir}/opt/$pkgname/doc/"
-
-	# Install license file if present
-	if [ -f "LICENSE" ]; then
-		install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
-	fi
-
-	# Install documentation if present
-	if [ -f "README.md" ]; then
-		install -Dm644 README.md "${pkgdir}/usr/share/doc/${pkgname}/README.md"
-	fi
 }
