@@ -72,5 +72,6 @@ package() {
 cd /opt/$pkgname
 exec ./$(basename "$pkgname") "\$@"
 EOF
-  chmod 755 "${pkgdir}/usr/bin/$pkgname"
+  chmod 755  "${pkgdir}/usr/bin/$pkgname"
+  chmod 1777 "${pkgdir}/opt/$pkgname"
 }
