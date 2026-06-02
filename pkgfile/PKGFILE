@@ -47,7 +47,8 @@ package() {
 #	mkdir -p "${user_home}/$pkgname"
 #	echo "Diretório $pkgname criado em ${user_home}"
 
-	install -dm1777 "${pkgdir}/opt/$pkgname"
+#	install -dm1777 "${pkgdir}/opt/$pkgname"
+  mkdir -m 1777 -p "${DESTDIR}/opt/$pkgname"
 	install -Dm755 "${srcdir}/$pkgname" "${pkgdir}/opt/$pkgname/$pkgname"
 
   # Criar o script wrapper em /usr/bin
