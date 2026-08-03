@@ -1,19 +1,18 @@
 # Maintainer: Vilmar Catafesta <vcatafesta@gmail.com>
 
 pkgname=sena
-pkgdesc="gerador randômico de jogos da megasena"
-#makedepends=('')
-#optdepends=('')
-#conflicts=('')
-#provides=('')
-#replaces=('')
+pkgdesc="Gerador randômico de jogos da megasena"
 pkgver=$(date +%Y%m%d)
 pkgrel=$(date +%H%M)
+provides=()
+replaces=()
+conflicts=()
 arch=('any')
 license=('MIT')
 url="https://github.com/vcatafesta/${pkgname}"
 source=("git+${url}.git")
 md5sums=('SKIP')
+makedepends=()
 depends=(dialog curl wget grep coreutils sed awk ncurses findutils jq)
 
 package() {
@@ -45,12 +44,12 @@ package() {
 
 	install -dm1777 "${pkgdir}/opt/$pkgname"
 	install -dm755 "${pkgdir}/opt/$pkgname/doc"
-	install -Dm755 "${srcdir}/$pkgname"           "${pkgdir}/opt/$pkgname/$pkgname"
+	install -Dm755 "${srcdir}/$pkgname" "${pkgdir}/opt/$pkgname/$pkgname"
 	install -Dm666 "${srcdir}/resultadosena.dat" "${pkgdir}/opt/$pkgname/resultadosena.dat"
-	install -Dm644 "${srcdir}/INSTALL"           "${pkgdir}/opt/$pkgname/doc/"
-	install -Dm644 "${srcdir}/LICENSE"           "${pkgdir}/opt/$pkgname/doc/"
-	install -Dm644 "${srcdir}/Makefile"          "${pkgdir}/opt/$pkgname/doc/"
-	install -Dm644 "${srcdir}/README.md"         "${pkgdir}/opt/$pkgname/doc/"
+	install -Dm644 "${srcdir}/INSTALL" "${pkgdir}/opt/$pkgname/doc/"
+	install -Dm644 "${srcdir}/LICENSE" "${pkgdir}/opt/$pkgname/doc/"
+	install -Dm644 "${srcdir}/Makefile" "${pkgdir}/opt/$pkgname/doc/"
+	install -Dm644 "${srcdir}/README.md" "${pkgdir}/opt/$pkgname/doc/"
 
 	# Install license file if present
 	if [ -f "LICENSE" ]; then
@@ -62,9 +61,9 @@ package() {
 		install -Dm644 README.md "${pkgdir}/usr/share/doc/${pkgname}/README.md"
 	fi
 
-  # Criar o script wrapper em /usr/bin
-  install -d "${pkgdir}/usr/bin"
-  cat <<EOF > "${pkgdir}/usr/bin/$pkgname"
+	# Criar o script wrapper em /usr/bin
+	install -d "${pkgdir}/usr/bin"
+	cat <<EOF >"${pkgdir}/usr/bin/$pkgname"
 #!/usr/bin/env bash
 # script wrapper para /opt/sena/sena
 # Copyright (c) Vilmar Catafesta, 2024 <vcatafesta@gmail.com>
@@ -74,7 +73,20 @@ exec ./$(basename "$pkgname") "\$@"
 EOF
 }
 
+pre_install() {
+	log "Iniciando instalação"
+}
+
 post_install() {
-  chmod 755  "${pkgdir}/usr/bin/$pkgname"
-  chmod 1777 "${pkgdir}/opt/$pkgname"
+	log "Finalizando instalação"
+	chmod 755 "${pkgdir}/usr/bin/$pkgname"
+	chmod 1777 "${pkgdir}/opt/$pkgname"
+}
+
+pre_upgrade() {
+	log "Iniciando upgrade"
+}
+
+post_upgrade() {
+	log "Finalizando upgrade"
 }
